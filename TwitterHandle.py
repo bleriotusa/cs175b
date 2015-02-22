@@ -12,7 +12,17 @@ access_token_key = '168559355-Qi1ARhn8IkDls2MlFYZtzX0fXhNEkX51DEKK0ni1'
 access_token_secret = 'BV7mPSXRnXel0frvjsMUh5R2ePmlDriyXj7nGI5P0nZ5d'
 
 
-def pull_tweets(tweets: int) -> None:
+class Tweet:
+    """
+    Small class to hold the tweet information.
+    """
+
+    def __init__(self):
+        self.hashtags = None
+        self.text = None
+
+
+def pull_tweets(tweets: int, hashtag: str) -> None:
     """
     Pulls specified number of tweets and writes them into file. Layout is:
         odd lines - hashtag list
@@ -22,11 +32,12 @@ def pull_tweets(tweets: int) -> None:
     """
 
     start_time = datetime.now()
+    print(start_time)
 
     api = TwitterAPI(consumer_key, consumer_secret, access_token_key, access_token_secret)
 
     data_file = open('data/{}{}'.format(str(start_time), '.txt'), 'w+')
-    r = TwitterRestPager(api, 'search/tweets', {'q': '#happy', 'count': 100, 'lang': 'en'})
+    r = TwitterRestPager(api, 'search/tweets', {'q': '#{}'.format(hashtag), 'count': 100, 'lang': 'en'})
 
     count = 0
     for item in r.get_iterator():
@@ -60,7 +71,7 @@ def read_data(filename: str) -> list:
             if line.startswith("['"):
                 tweet = Tweet()
                 # print(line)
-                tweet.hashtags = ast.literal_eval(line.strip())
+                tweet.hashtags = ast.literal_eval(line.strip())  # method to evaluate list strings into python lists
             else:
                 tweet.text = line.strip()
                 tweets.append(tweet)
@@ -69,16 +80,6 @@ def read_data(filename: str) -> list:
             print('{}\n\t{}'.format(tweet.hashtags, tweet.text))
 
 
-class Tweet:
-    """
-    Small class to hold the tweet information.
-    """
-
-    def __init__(self):
-        self.hashtags = None
-        self.text = None
-
-
 if __name__ == '__main__':
-    # filename = pull_tweets(18000)
-    read_data('data/{}'.format('2015-02-21 21:47:49.526038.txt'))
+    filename = pull_tweets(18000, 'happy')
+    read_data('data/{}.txt'.format(filename))
