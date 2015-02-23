@@ -1,10 +1,11 @@
 __author__ = 'Michael'
 
+import ast
 import time
+import glob
 from TwitterAPI import TwitterAPI
 from TwitterAPI import TwitterRestPager
 from datetime import datetime
-import ast
 
 consumer_key = 'XKHtqeaKlCR9n4BG3MI5cwftj'
 consumer_secret = 'NcQXp5pStiFqJnPn3DjJZZyHRaNb7lV01lcOfZ4t42QfoA08pQ'
@@ -79,7 +80,10 @@ def read_data(filename: str) -> list:
         for tweet in tweets:
             print('{}\n\t{}'.format(tweet.hashtags, tweet.text))
 
+def read_all_data():
+    for filename in glob.glob("data/*.txt"):
+        read_data(filename)
 
 if __name__ == '__main__':
     filename = pull_tweets(18000, 'happy')
-    read_data('data/{}.txt'.format(filename))
+    read_all_data()
