@@ -1,8 +1,10 @@
 __author__ = 'Michael'
-
 import ast
 import time
 import glob
+import nltk
+from nltk.corpus import stopwords
+stopwordslist = stopwords.words('english')
 from TwitterAPI import TwitterAPI
 from TwitterAPI import TwitterRestPager
 from datetime import datetime
@@ -21,6 +23,7 @@ class Tweet:
     def __init__(self):
         self.hashtags = None
         self.text = None
+        self.target = None
 
 
 def pull_tweets(tweets: int, hashtag: str) -> None:
@@ -45,8 +48,8 @@ def pull_tweets(tweets: int, hashtag: str) -> None:
         if count >= tweets:
             break
         if 'text' in item:
-            data = '{}\n{}\n'.format([hashtag['text'] for hashtag in item['entities']['hashtags']],
-                                     item['text'].replace('\n', ' '))
+            data = '{}\n{}\n{}\n'.format([hashtag['text'] for hashtag in item['entities']['hashtags']],
+                                     item['text'].replace('\n', ' '), hashtag)
             print(count, data)
             data_file.write(data)
             count += 1
@@ -64,17 +67,20 @@ def read_data(filename: str) -> list:
     :param filename: file to read from
     :return: list of Tweet objects
     """
-
+    num_lines_data = 3
     with open(filename) as f:
         tweets = []
         tweet = Tweet()
-        for line in f:
-            if line.startswith("['"):
+
+        for counter, line in enumerate(f):
+            if counter % num_lines_data is 0:
                 tweet = Tweet()
                 # print(line)
                 tweet.hashtags = ast.literal_eval(line.strip())  # method to evaluate list strings into python lists
-            else:
+            elif counter % num_lines_data is 1:
                 tweet.text = line.strip()
+            elif counter % num_lines_data is 2:
+                tweet.target = line.strip()
                 tweets.append(tweet)
 
         for tweet in tweets:
@@ -84,6 +90,21 @@ def read_all_data():
     for filename in glob.glob("data/*.txt"):
         read_data(filename)
 
+
+
+
+# Remove stop words
+from sklearn.feature_extraction.text import CountVectorizer
+count_vect = CountVectorizer()
+default_tokenizer_function = count_vect.build_tokenizer()
+
+# Override default countvectorizer tokenizer to remove stopwords
+def remove_stop_word_tokenizer(s):
+    words = default_tokenizer_function(s)
+    words = list(w for w in words if w.lower() not in stopwordslist)
+    return words
+
+
 if __name__ == '__main__':
-    filename = pull_tweets(18000, 'happy')
+    filename = pull_tweets(180, 'happy')
     read_all_data()

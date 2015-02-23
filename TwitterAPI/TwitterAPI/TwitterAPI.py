@@ -248,7 +248,7 @@ class _StreamingIterable(object):
                     # read bytes until item boundary reached
                     buf += self.stream.read(1)
                     if not buf:
-                        # check for stall (i.e. no data for 90 seconds)
+                        # check for stall (i.e. no olddata for 90 seconds)
                         if not stall_timer:
                             stall_timer = time.time()
                         elif time.time() - stall_timer > STREAMING_TIMEOUT:
