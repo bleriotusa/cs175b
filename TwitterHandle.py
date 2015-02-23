@@ -44,18 +44,24 @@ def pull_tweets(tweets: int, hashtag: str) -> None:
     r = TwitterRestPager(api, 'search/tweets', {'q': '#{}'.format(hashtag), 'count': 100, 'lang': 'en'})
 
     count = 0
+    tweet_list = []
+
     for item in r.get_iterator():
+        tweet = Tweet()
         if count >= tweets:
             break
         if 'text' in item:
-            data = '{}\n{}\n{}\n'.format([hashtag['text'] for hashtag in item['entities']['hashtags']],
-                                     item['text'].replace('\n', ' '), hashtag)
-            print(count, data)
-            data_file.write(data)
+            tweet.hashtags = [hashtag['text'] for hashtag in item['entities']['hashtags']]
+            tweet.text = item['text'].replace('\n', ' ')
+            tweet.target = hashtag
+
+            tweet_list.append(tweet)
+            print(tweet.hashtags, tweet.text, tweet.target)
             count += 1
         elif 'message' in item and item['code'] == 88:
             print('SUSPEND, RATE LIMIT EXCEEDED: %s\n' % item['message'])
             time.sleep(16 * 60)
+
 
     data_file.close()
     print(datetime.now() - start_time)
