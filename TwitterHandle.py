@@ -8,6 +8,7 @@ stopwordslist = stopwords.words('english')
 from TwitterAPI import TwitterAPI
 from TwitterAPI import TwitterRestPager
 from datetime import datetime
+import pickle
 
 consumer_key = 'XKHtqeaKlCR9n4BG3MI5cwftj'
 consumer_secret = 'NcQXp5pStiFqJnPn3DjJZZyHRaNb7lV01lcOfZ4t42QfoA08pQ'
@@ -40,7 +41,7 @@ def pull_tweets(tweets: int, hashtag: str) -> None:
 
     api = TwitterAPI(consumer_key, consumer_secret, access_token_key, access_token_secret)
 
-    data_file = open('data/{}{}'.format(str(start_time), '.txt'), 'w+')
+    data_file = open('data/{}{}'.format(str(start_time), '.txt'), 'wb+')
     r = TwitterRestPager(api, 'search/tweets', {'q': '#{}'.format(hashtag), 'count': 100, 'lang': 'en'})
 
     count = 0
@@ -62,7 +63,7 @@ def pull_tweets(tweets: int, hashtag: str) -> None:
             print('SUSPEND, RATE LIMIT EXCEEDED: %s\n' % item['message'])
             time.sleep(16 * 60)
 
-
+    pickle.dump(tweet_list, data_file, 2)
     data_file.close()
     print(datetime.now() - start_time)
     return start_time
@@ -73,31 +74,20 @@ def read_data(filename: str) -> list:
     :param filename: file to read from
     :return: list of Tweet objects
     """
-    num_lines_data = 3
-    with open(filename) as f:
-        tweets = []
-        tweet = Tweet()
 
-        for counter, line in enumerate(f):
-            if counter % num_lines_data is 0:
-                tweet = Tweet()
-                # print(line)
-                tweet.hashtags = ast.literal_eval(line.strip())  # method to evaluate list strings into python lists
-            elif counter % num_lines_data is 1:
-                tweet.text = line.strip()
-            elif counter % num_lines_data is 2:
-                tweet.target = line.strip()
-                tweets.append(tweet)
+    with open(filename, 'rb') as f:
+        return pickle.load(f)
 
-        for tweet in tweets:
-            print('{}\n\t{}'.format(tweet.hashtags, tweet.text))
 
 def read_all_data():
+    all_data = []
     for filename in glob.glob("data/*.txt"):
-        read_data(filename)
+        all_data.extend(read_data(filename))
 
+    for tweet in all_data:
+        print('{}: {}\n\t{}'.format(tweet.target, tweet.hashtags, tweet.text))
 
-
+    return all_data
 
 # Remove stop words
 from sklearn.feature_extraction.text import CountVectorizer
@@ -112,5 +102,7 @@ def remove_stop_word_tokenizer(s):
 
 
 if __name__ == '__main__':
-    filename = pull_tweets(180, 'happy')
-    read_all_data()
+    # filename = pull_tweets(50, 'happy')
+    # print(read_data('data/'+str(filename)+'.txt'))
+    data = read_all_data()
+    print(len(data))
