@@ -51,22 +51,23 @@ def pull_tweets(tweets: int, hashtag: str) -> None:
     r = TwitterRestPager(api, 'search/tweets', {'q': '#{}'.format(hashtag), 'count': 100, 'lang': 'en'})
 
     tweet_set = set()
+    while len(tweet_set) < tweets:
+        for item in r.get_iterator():
+            tweet = Tweet()
+            if len(tweet_set) >= tweets:
+                break
+            if 'text' in item:
+                tweet.hashtags = [hashtag['text'] for hashtag in item['entities']['hashtags']]
+                tweet.text = item['text'].replace('\n', ' ')
+                tweet.target = hashtag
+                if tweet not in tweet_set:
+                    tweet_set.add(tweet)
+                    print(tweet.hashtags, tweet.text, tweet.target)
+                print(len(tweet_set))
 
-    for item in r.get_iterator():
-        tweet = Tweet()
-        if len(tweet_set) >= tweets:
-            break
-        if 'text' in item:
-            tweet.hashtags = [hashtag['text'] for hashtag in item['entities']['hashtags']]
-            tweet.text = item['text'].replace('\n', ' ')
-            tweet.target = hashtag
-            if tweet not in tweet_set:
-                tweet_set.add(tweet)
-                print(tweet.hashtags, tweet.text, tweet.target)
-
-        elif 'message' in item and item['code'] == 88:
-            print('SUSPEND, RATE LIMIT EXCEEDED: %s\n' % item['message'])
-            time.sleep(16 * 60)
+            elif 'message' in item and item['code'] == 88:
+                print('SUSPEND, RATE LIMIT EXCEEDED: %s\n' % item['message'])
+                time.sleep(16 * 60)
 
     pickle.dump(tweet_set, data_file, 2)
     data_file.close()
@@ -109,7 +110,7 @@ def remove_stop_word_tokenizer(s):
 
 
 if __name__ == '__main__':
-    # filename = pull_tweets(100000, 'sarcastic')
-    # print(read_data('data/'+str(filename)+'.txt'))
-    data = read_all_data('sarcastic')
-    print(len(data))
+    filename = pull_tweets(100000, 'sad')
+    print(read_data('data/'+str(filename)+'.txt'))
+    # data = read_all_data()
+    # print(len(data))
