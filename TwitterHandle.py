@@ -92,8 +92,13 @@ def read_all_data(tone=None):
     for filename in glob.glob("data/*.txt"):
         all_data.update(read_data(filename))
 
-    print(all_data)
+    # print(all_data)
+    import re
+    tone_replace = re.compile(re.escape(tone), re.IGNORECASE)
     target_data = {tweet for tweet in all_data if tweet.target == tone} if tone else all_data
+
+    for tweet in target_data:
+        tweet.text = tone_replace.sub('', tweet.text)
     # for tweet in target_data:
     #     print('{}: {}\n\t{}'.format(tweet.target, tweet.hashtags, tweet.text))
 
@@ -112,14 +117,15 @@ def remove_stop_word_tokenizer(s):
     return words
 
 
+count_vect = CountVectorizer()
+count_vect.tokenizer = remove_stop_word_tokenizer
+tfidf_transformer = TfidfTransformer()
+
 def train(data: list, targets: list):
-    count_vect = CountVectorizer()
-    count_vect.tokenizer = remove_stop_word_tokenizer
     X_tweet_counts = count_vect.fit_transform(data)
 
     # Compute term frequencies and store in X_train_tf
     # Compute tfidf feature values and store in X_train_tfidf
-    tfidf_transformer = TfidfTransformer()
     X_train_tfidf = tfidf_transformer.fit_transform(X_tweet_counts)
 
     # train and test a Multinomial Naive Bayes Classifier
@@ -128,15 +134,17 @@ def train(data: list, targets: list):
 
 
 def predict(predictor, test_data):
-    count_vect = CountVectorizer()
+    # count_vect = CountVectorizer()
+    # count_vect.tokenizer = remove_stop_word_tokenizer
+
     X_new_counts = count_vect.transform(test_data)
-    tfidf_transformer = TfidfTransformer()
+    # tfidf_transformer = TfidfTransformer()
     X_new_tfidf = tfidf_transformer.transform(X_new_counts)
     predictedNB = predictor.predict(X_new_tfidf)
 
-    for doc, category in zip(test_data, predictedNB):
-         print('%r %s' % (doc, category))
-    print('\n')
+    # for doc, category in zip(test_data, predictedNB):
+    #      print('%r %s' % (doc, category))
+    # print('\n')
 
     return predictedNB
 
@@ -159,16 +167,19 @@ def test(positive: list, negative: list, seed: int):
     test_targets = targets[int(.75 * len(targets)):]
 
     predictor = train(training_data, training_targets)
-    predicted = predict(predictor, test_data )
+    predicted = predict(predictor, test_data)
 
+    for text, prediction, target in zip(test_data, predicted, test_targets):
+        print(prediction, target, text)
     successes = [1 for prediction, target in zip(predicted, test_targets) if prediction == target]
     print(len(successes) / len(test_data))
 
 
 if __name__ == '__main__':
-    # filename = pull_tweets(50000, 'happy')
+    # filename = pull_tweets(15000, 'happy')
     # filename = pull_tweets(50000, 'sad')
     positive = read_all_data('happy')
     negative = read_all_data('sad')
+    print(len(positive), len(negative))
 
     test([w.text for w in positive], [w.text for w in negative], 1)
