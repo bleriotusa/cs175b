@@ -10,6 +10,7 @@ from TwitterAPI import TwitterAPI
 from TwitterAPI import TwitterRestPager
 from datetime import datetime
 import pickle
+from sklearn.feature_extraction.text import TfidfTransformer
 
 consumer_key = 'XKHtqeaKlCR9n4BG3MI5cwftj'
 consumer_secret = 'NcQXp5pStiFqJnPn3DjJZZyHRaNb7lV01lcOfZ4t42QfoA08pQ'
@@ -93,8 +94,8 @@ def read_all_data(tone=None):
 
     print(all_data)
     target_data = {tweet for tweet in all_data if tweet.target == tone} if tone else all_data
-    for tweet in target_data:
-        print('{}: {}\n\t{}'.format(tweet.target, tweet.hashtags, tweet.text))
+    # for tweet in target_data:
+    #     print('{}: {}\n\t{}'.format(tweet.target, tweet.hashtags, tweet.text))
 
     return target_data
 
@@ -111,40 +112,63 @@ def remove_stop_word_tokenizer(s):
     return words
 
 
-def train(positive, negative):
-
-    all_data = positive + negative
-
-    # creates a list of target values. Positive entries will be "1" and negative entries will be "0"
-    targets = [1] * len(positive)
-    targets = targets + ([0] * len(negative))
-
+def train(data: list, targets: list):
     count_vect = CountVectorizer()
     count_vect.tokenizer = remove_stop_word_tokenizer
-    X_tweet_counts = count_vect.fit_transform(all_data)
+    X_tweet_counts = count_vect.fit_transform(data)
 
     # Compute term frequencies and store in X_train_tf
-    from sklearn.feature_extraction.text import TfidfTransformer
     # Compute tfidf feature values and store in X_train_tfidf
     tfidf_transformer = TfidfTransformer()
     X_train_tfidf = tfidf_transformer.fit_transform(X_tweet_counts)
 
     # train and test a Multinomial Naive Bayes Classifier
     from sklearn.naive_bayes import MultinomialNB
-    clfNB = MultinomialNB().fit(X_train_tfidf, targets)
+    return MultinomialNB().fit(X_train_tfidf, targets)
 
-    docs_new = ['You are great! Life is great!', 'Hate this. Hate everything.']
-    X_new_counts = count_vect.transform(docs_new)
+
+def predict(predictor, test_data):
+    count_vect = CountVectorizer()
+    X_new_counts = count_vect.transform(test_data)
+    tfidf_transformer = TfidfTransformer()
     X_new_tfidf = tfidf_transformer.transform(X_new_counts)
-    predictedNB = clfNB.predict(X_new_tfidf)
+    predictedNB = predictor.predict(X_new_tfidf)
 
-    for doc, category in zip(docs_new, predictedNB):
+    for doc, category in zip(test_data, predictedNB):
          print('%r %s' % (doc, category))
     print('\n')
 
+    return predictedNB
+
+def test(positive: list, negative: list, seed: int):
+    all_data = positive + negative
+
+    # creates a list of target values. Positive entries will be "1" and negative entries will be "0"
+    targets = [1] * len(positive)
+    targets = targets + ([0] * len(negative))
+
+    random.seed(seed)
+    random.shuffle(all_data)
+    random.seed(seed)
+    random.shuffle(targets)
+
+    training_data = all_data[:int(.75 * len(all_data))]
+    test_data = all_data[int(.75 * len(all_data)):]
+
+    training_targets = targets[:int(.75 * len(targets))]
+    test_targets = targets[int(.75 * len(targets)):]
+
+    predictor = train(training_data, training_targets)
+    predicted = predict(predictor, test_data )
+
+    successes = [1 for prediction, target in zip(predicted, test_targets) if prediction == target]
+    print(len(successes) / len(test_data))
+
+
 if __name__ == '__main__':
-    filename = pull_tweets(50000, 'happy')
-    filename = pull_tweets(50000, 'sad')
+    # filename = pull_tweets(50000, 'happy')
+    # filename = pull_tweets(50000, 'sad')
     positive = read_all_data('happy')
     negative = read_all_data('sad')
-    train([w.text for w in positive], [w.text for w in negative])
+
+    test([w.text for w in positive], [w.text for w in negative], 1)
