@@ -3,6 +3,7 @@ import ast
 import time
 import glob
 import nltk
+import random
 from nltk.corpus import stopwords
 stopwordslist = stopwords.words('english')
 from TwitterAPI import TwitterAPI
@@ -99,18 +100,51 @@ def read_all_data(tone=None):
 
 # Remove stop words
 from sklearn.feature_extraction.text import CountVectorizer
-count_vect = CountVectorizer()
-default_tokenizer_function = count_vect.build_tokenizer()
+
 
 # Override default countvectorizer tokenizer to remove stopwords
 def remove_stop_word_tokenizer(s):
+    count_vect = CountVectorizer()
+    default_tokenizer_function = count_vect.build_tokenizer()
     words = default_tokenizer_function(s)
     words = list(w for w in words if w.lower() not in stopwordslist)
     return words
 
 
+def train(positive, negative):
+
+    all_data = positive + negative
+
+    # creates a list of target values. Positive entries will be "1" and negative entries will be "0"
+    targets = [1] * len(positive)
+    targets = targets + ([0] * len(negative))
+
+    count_vect = CountVectorizer()
+    count_vect.tokenizer = remove_stop_word_tokenizer
+    X_tweet_counts = count_vect.fit_transform(all_data)
+
+    # Compute term frequencies and store in X_train_tf
+    from sklearn.feature_extraction.text import TfidfTransformer
+    # Compute tfidf feature values and store in X_train_tfidf
+    tfidf_transformer = TfidfTransformer()
+    X_train_tfidf = tfidf_transformer.fit_transform(X_tweet_counts)
+
+    # train and test a Multinomial Naive Bayes Classifier
+    from sklearn.naive_bayes import MultinomialNB
+    clfNB = MultinomialNB().fit(X_train_tfidf, targets)
+
+    docs_new = ['You are great! Life is great!', 'Hate this. Hate everything.']
+    X_new_counts = count_vect.transform(docs_new)
+    X_new_tfidf = tfidf_transformer.transform(X_new_counts)
+    predictedNB = clfNB.predict(X_new_tfidf)
+
+    for doc, category in zip(docs_new, predictedNB):
+         print('%r %s' % (doc, category))
+    print('\n')
+
 if __name__ == '__main__':
-    filename = pull_tweets(100000, 'sad')
-    print(read_data('data/'+str(filename)+'.txt'))
-    # data = read_all_data()
-    # print(len(data))
+    filename = pull_tweets(50000, 'happy')
+    filename = pull_tweets(50000, 'sad')
+    positive = read_all_data('happy')
+    negative = read_all_data('sad')
+    train([w.text for w in positive], [w.text for w in negative])
