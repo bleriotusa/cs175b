@@ -26,6 +26,12 @@ class Tweet:
         self.text = None
         self.target = None
 
+    def __eq__(self, other):
+        return self.text == other.text
+
+    def __hash__(self):
+        return hash(self.text)
+
 
 def pull_tweets(tweets: int, hashtag: str) -> None:
     """
@@ -44,26 +50,25 @@ def pull_tweets(tweets: int, hashtag: str) -> None:
     data_file = open('data/{}{}'.format(str(start_time), '.txt'), 'wb+')
     r = TwitterRestPager(api, 'search/tweets', {'q': '#{}'.format(hashtag), 'count': 100, 'lang': 'en'})
 
-    count = 0
-    tweet_list = []
+    tweet_set = set()
 
     for item in r.get_iterator():
         tweet = Tweet()
-        if count >= tweets:
+        if len(tweet_set) >= tweets:
             break
         if 'text' in item:
             tweet.hashtags = [hashtag['text'] for hashtag in item['entities']['hashtags']]
             tweet.text = item['text'].replace('\n', ' ')
             tweet.target = hashtag
+            if tweet not in tweet_set:
+                tweet_set.add(tweet)
+                print(tweet.hashtags, tweet.text, tweet.target)
 
-            tweet_list.append(tweet)
-            print(tweet.hashtags, tweet.text, tweet.target)
-            count += 1
         elif 'message' in item and item['code'] == 88:
             print('SUSPEND, RATE LIMIT EXCEEDED: %s\n' % item['message'])
             time.sleep(16 * 60)
 
-    pickle.dump(tweet_list, data_file, 2)
+    pickle.dump(tweet_set, data_file, 2)
     data_file.close()
     print(datetime.now() - start_time)
     return start_time
@@ -79,15 +84,17 @@ def read_data(filename: str) -> list:
         return pickle.load(f)
 
 
-def read_all_data():
-    all_data = []
+def read_all_data(tone=None):
+    all_data = set()
     for filename in glob.glob("data/*.txt"):
-        all_data.extend(read_data(filename))
+        all_data.update(read_data(filename))
 
-    for tweet in all_data:
+    print(all_data)
+    target_data = {tweet for tweet in all_data if tweet.target == tone} if tone else all_data
+    for tweet in target_data:
         print('{}: {}\n\t{}'.format(tweet.target, tweet.hashtags, tweet.text))
 
-    return all_data
+    return target_data
 
 # Remove stop words
 from sklearn.feature_extraction.text import CountVectorizer
@@ -102,7 +109,7 @@ def remove_stop_word_tokenizer(s):
 
 
 if __name__ == '__main__':
-    # filename = pull_tweets(50, 'happy')
+    # filename = pull_tweets(100000, 'sarcastic')
     # print(read_data('data/'+str(filename)+'.txt'))
-    data = read_all_data()
+    data = read_all_data('sarcastic')
     print(len(data))
