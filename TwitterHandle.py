@@ -12,10 +12,10 @@ from datetime import datetime
 import pickle
 from sklearn.feature_extraction.text import TfidfTransformer
 
-consumer_key = 'ajGlROl4RpfAg1Kkmm2nxD3Kr'
-consumer_secret = 'kstpbSj1NsXtkP7o5as5HxIKIyrHXgJ67T80aggpWtzSNYOYbo'
-access_token_key = '175851454-Ih1GVRnJnvwu0NWSTJfon9oT2ehf6sgn73eHYZA5'
-access_token_secret = '8560w6tjXiws01Ixf5sPZBVhapp7KbezeDQvi1efTzDtf'
+consumer_key = 'XKHtqeaKlCR9n4BG3MI5cwftj'
+consumer_secret = 'NcQXp5pStiFqJnPn3DjJZZyHRaNb7lV01lcOfZ4t42QfoA08pQ'
+access_token_key = '168559355-Qi1ARhn8IkDls2MlFYZtzX0fXhNEkX51DEKK0ni1'
+access_token_secret = 'BV7mPSXRnXel0frvjsMUh5R2ePmlDriyXj7nGI5P0nZ5d'
 
 
 class Tweet:
