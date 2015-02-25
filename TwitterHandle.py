@@ -94,7 +94,6 @@ def read_all_data(tone=None):
     all_data = set()
     for filename in glob.glob("data/*.txt"):
         data = read_data(filename)
-        print(data)
         all_data.update(data)
 
     # print(all_data)
@@ -140,6 +139,7 @@ def train(data: list, targets: list):
     return MultinomialNB().fit(X_train_tfidf, targets)
 
 
+random.seed(1)
 def predict(predictor, test_data):
     # count_vect = CountVectorizer()
     # count_vect.tokenizer = remove_stop_word_tokenizer
@@ -179,22 +179,40 @@ def test(positive: list, negative: list, seed: int):
     for text, prediction, target in zip(test_data, predicted, test_targets):
         print(prediction, target, text)
     successes = [1 for prediction, target in zip(predicted, test_targets) if prediction == target]
-    print(len(successes) / len(test_data))
+    return (len(successes) / len(test_data))
 
 
 if __name__ == '__main__':
-
-    filename = pull_tweets(15000, 'courageous')
-    filename = pull_tweets(15000, 'fearful')
-    filename = pull_tweets(15000, 'sarcastic')
-    filename = pull_tweets(15000, 'sincere')
-    filename = pull_tweets(15000, 'relaxed')
-    filename = pull_tweets(15000, 'stressed')
-
-    all = read_all_data()
-    print(len(all))
-    # positive = read_all_data('happy')
-    # negative = read_all_data('sad')
-    # print(len(positive), len(negative))
     #
-    # test([w.text for w in positive], [w.text for w in negative], 1)
+    # pull_tweets(5000, 'courage')
+    # pull_tweets(5000, 'scared')
+    # pull_tweets(5000, 'sarcasm')
+    # pull_tweets(5000, 'genuine')
+    # pull_tweets(5000, 'relaxed')
+    # pull_tweets(5000, 'stressed')
+
+    happy = list(read_all_data('happy'))
+    sad = list(read_all_data('sad'))
+    fearful = list(read_all_data('scary'))
+    courageous = list(read_all_data('courage'))
+    sarcastic = list(read_all_data('sarcasm'))
+    sincere = list(read_all_data('sincere'))
+    relaxed = list(read_all_data('relaxed'))
+    stressed = list(read_all_data('stressed'))
+
+
+    # Ensures that the length of the two datasets are the same, so that there's a 50% chance of being right by default
+    happylen = min(len(happy), len(sad))
+    couragelen = min(len(fearful), len(courageous))
+    sarcasmlen = min(len(sarcastic), len(sincere))
+    relaxedlen = min(len(relaxed), len(stressed))
+
+
+    print(len(happy), len(sad), len(fearful), len(courageous),
+          len(sarcastic), len(sincere), len(relaxed), len(stressed))
+
+    results = [test([w.text for w in happy[:happylen]], [w.text for w in sad[:happylen]], 1)]
+    results.append(test([w.text for w in courageous[:couragelen]], [w.text for w in fearful[:couragelen]], 1))
+    results.append(test([w.text for w in sincere[:sarcasmlen]], [w.text for w in sarcastic[:sarcasmlen]], 1))
+    results.append(test([w.text for w in stressed[:relaxedlen]], [w.text for w in relaxed[:relaxedlen]], 1))
+    print(results)
