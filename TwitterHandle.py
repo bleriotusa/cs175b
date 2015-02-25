@@ -53,23 +53,23 @@ def pull_tweets(tweets: int, hashtag: str) -> None:
     r = TwitterRestPager(api, 'search/tweets', {'q': '#{}'.format(hashtag), 'count': 100, 'lang': 'en'})
 
     tweet_set = set()
-    while len(tweet_set) < tweets:
-        for item in r.get_iterator():
-            tweet = Tweet()
-            if len(tweet_set) >= tweets:
-                break
-            if 'text' in item:
-                tweet.hashtags = [hashtag['text'] for hashtag in item['entities']['hashtags']]
-                tweet.text = item['text'].replace('\n', ' ')
-                tweet.target = hashtag
-                if tweet not in tweet_set:
-                    tweet_set.add(tweet)
-                    print(tweet.hashtags, tweet.text, tweet.target)
-                print(len(tweet_set))
+    # while len(tweet_set) < tweets:
+    for item in r.get_iterator():
+        tweet = Tweet()
+        if len(tweet_set) >= tweets:
+            break
+        if 'text' in item:
+            tweet.hashtags = [hashtag['text'] for hashtag in item['entities']['hashtags']]
+            tweet.text = item['text'].replace('\n', ' ')
+            tweet.target = hashtag
+            if tweet not in tweet_set:
+                tweet_set.add(tweet)
+                print(tweet.hashtags, tweet.text, tweet.target)
+            print(len(tweet_set))
 
-            elif 'message' in item and item['code'] == 88:
-                print('SUSPEND, RATE LIMIT EXCEEDED: %s\n' % item['message'])
-                time.sleep(16 * 60)
+        elif 'message' in item and item['code'] == 88:
+            print('SUSPEND, RATE LIMIT EXCEEDED: %s\n' % item['message'])
+            time.sleep(16 * 60)
 
     pickle.dump(tweet_set, data_file, 2)
     data_file.close()
@@ -84,21 +84,28 @@ def read_data(filename: str) -> list:
     """
 
     with open(filename, 'rb') as f:
-        return pickle.load(f)
+        try:
+            return pickle.load(f)
+        except EOFError:
+            return set()
 
 
 def read_all_data(tone=None):
     all_data = set()
     for filename in glob.glob("data/*.txt"):
-        all_data.update(read_data(filename))
+        data = read_data(filename)
+        print(data)
+        all_data.update(data)
 
     # print(all_data)
-    import re
-    tone_replace = re.compile(re.escape(tone), re.IGNORECASE)
+
     target_data = {tweet for tweet in all_data if tweet.target == tone} if tone else all_data
 
-    for tweet in target_data:
-        tweet.text = tone_replace.sub('', tweet.text)
+    import re
+    if tone:
+        tone_replace = re.compile(re.escape(tone), re.IGNORECASE)
+        for tweet in target_data:
+            tweet.text = tone_replace.sub('', tweet.text)
     # for tweet in target_data:
     #     print('{}: {}\n\t{}'.format(tweet.target, tweet.hashtags, tweet.text))
 
@@ -176,10 +183,18 @@ def test(positive: list, negative: list, seed: int):
 
 
 if __name__ == '__main__':
-    # filename = pull_tweets(15000, 'happy')
-    # filename = pull_tweets(50000, 'sad')
-    positive = read_all_data('happy')
-    negative = read_all_data('sad')
-    print(len(positive), len(negative))
 
-    test([w.text for w in positive], [w.text for w in negative], 1)
+    filename = pull_tweets(15000, 'courageous')
+    filename = pull_tweets(15000, 'fearful')
+    filename = pull_tweets(15000, 'sarcastic')
+    filename = pull_tweets(15000, 'sincere')
+    filename = pull_tweets(15000, 'relaxed')
+    filename = pull_tweets(15000, 'stressed')
+
+    all = read_all_data()
+    print(len(all))
+    # positive = read_all_data('happy')
+    # negative = read_all_data('sad')
+    # print(len(positive), len(negative))
+    #
+    # test([w.text for w in positive], [w.text for w in negative], 1)
