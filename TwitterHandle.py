@@ -12,10 +12,10 @@ from datetime import datetime
 import pickle
 from sklearn.feature_extraction.text import TfidfTransformer
 
-consumer_key = 'XKHtqeaKlCR9n4BG3MI5cwftj'
-consumer_secret = 'NcQXp5pStiFqJnPn3DjJZZyHRaNb7lV01lcOfZ4t42QfoA08pQ'
-access_token_key = '168559355-Qi1ARhn8IkDls2MlFYZtzX0fXhNEkX51DEKK0ni1'
-access_token_secret = 'BV7mPSXRnXel0frvjsMUh5R2ePmlDriyXj7nGI5P0nZ5d'
+consumer_key = 'ajGlROl4RpfAg1Kkmm2nxD3Kr'
+consumer_secret = 'kstpbSj1NsXtkP7o5as5HxIKIyrHXgJ67T80aggpWtzSNYOYbo'
+access_token_key = '175851454-Ih1GVRnJnvwu0NWSTJfon9oT2ehf6sgn73eHYZA5'
+access_token_secret = '8560w6tjXiws01Ixf5sPZBVhapp7KbezeDQvi1efTzDtf'
 
 
 class Tweet:
@@ -187,7 +187,7 @@ if __name__ == '__main__':
     # pull_tweets(5000, 'courage')
     # pull_tweets(5000, 'scared')
     # pull_tweets(5000, 'sarcasm')
-    # pull_tweets(5000, 'genuine')
+    pull_tweets(5000, 'serious')
     # pull_tweets(5000, 'relaxed')
     # pull_tweets(5000, 'stressed')
 
@@ -196,7 +196,7 @@ if __name__ == '__main__':
     fearful = list(read_all_data('scary'))
     courageous = list(read_all_data('courage'))
     sarcastic = list(read_all_data('sarcasm'))
-    sincere = list(read_all_data('sincere'))
+    sincere = list(read_all_data('serious'))
     relaxed = list(read_all_data('relaxed'))
     stressed = list(read_all_data('stressed'))
 
@@ -213,6 +213,6 @@ if __name__ == '__main__':
 
     results = [test([w.text for w in happy[:happylen]], [w.text for w in sad[:happylen]], 1)]
     results.append(test([w.text for w in courageous[:couragelen]], [w.text for w in fearful[:couragelen]], 1))
-    results.append(test([w.text for w in sincere[:sarcasmlen]], [w.text for w in sarcastic[:sarcasmlen]], 1))
+    results.append(test([w.text for w in sarcastic[:sarcasmlen]], [w.text for w in sincere[:sarcasmlen]], 1))
     results.append(test([w.text for w in stressed[:relaxedlen]], [w.text for w in relaxed[:relaxedlen]], 1))
     print(results)
