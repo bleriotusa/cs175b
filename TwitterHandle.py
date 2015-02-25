@@ -184,20 +184,20 @@ def test(positive: list, negative: list, seed: int):
 
 if __name__ == '__main__':
 
-    filename = pull_tweets(15000, 'courageous')
-    filename = pull_tweets(15000, 'fearful')
-    filename = pull_tweets(15000, 'sarcastic')
-    filename = pull_tweets(15000, 'sincere')
-    filename = pull_tweets(15000, 'relaxed')
-    filename = pull_tweets(15000, 'stressed')
-    filename = pull_tweets(15000, 'happy')
-    filename = pull_tweets(15000, 'sad')
+    # filename = pull_tweets(15000, 'courageous')
+    # filename = pull_tweets(15000, 'fearful')
+    # filename = pull_tweets(15000, 'serious')
+    # filename = pull_tweets(15000, 'sincere')
+    # filename = pull_tweets(15000, 'relaxed')
+    # filename = pull_tweets(15000, 'stressed')
+    # filename = pull_tweets(15000, 'happy')
+    # filename = pull_tweets(15000, 'sad')
 
-    all = read_all_data()
-    print(len(all))
+    # all = read_all_data()
+    # print(len(all))
 
-    # positive = read_all_data('happy')
-    # negative = read_all_data('sad')
-    # print(len(positive), len(negative))
-    #
-    # test([w.text for w in positive], [w.text for w in negative], 1)
+    positive = read_all_data('relaxed')
+    negative = read_all_data('stressed')
+    print(len(positive), len(negative))
+
+    test([w.text for w in positive], [w.text for w in negative], 1)
