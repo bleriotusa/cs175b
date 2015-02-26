@@ -139,7 +139,6 @@ def train(data: list, targets: list):
     return MultinomialNB().fit(X_train_tfidf, targets)
 
 
-random.seed(1)
 def predict(predictor, test_data):
     # count_vect = CountVectorizer()
     # count_vect.tokenizer = remove_stop_word_tokenizer
@@ -178,8 +177,9 @@ def test(positive: list, negative: list, seed: int):
 
     for text, prediction, target in zip(test_data, predicted, test_targets):
         print(prediction, target, text)
-    successes = [1 for prediction, target in zip(predicted, test_targets) if prediction == target]
-    return (len(successes) / len(test_data))
+
+    print(predict(predictor, ["Men"]))
+    return predictor
 
 
 if __name__ == '__main__':
@@ -187,7 +187,7 @@ if __name__ == '__main__':
     # pull_tweets(5000, 'courage')
     # pull_tweets(5000, 'scared')
     # pull_tweets(5000, 'sarcasm')
-    pull_tweets(5000, 'serious')
+    # pull_tweets(5000, 'serious')
     # pull_tweets(5000, 'relaxed')
     # pull_tweets(5000, 'stressed')
 
@@ -211,8 +211,19 @@ if __name__ == '__main__':
     print(len(happy), len(sad), len(fearful), len(courageous),
           len(sarcastic), len(sincere), len(relaxed), len(stressed))
 
-    results = [test([w.text for w in happy[:happylen]], [w.text for w in sad[:happylen]], 1)]
-    results.append(test([w.text for w in courageous[:couragelen]], [w.text for w in fearful[:couragelen]], 1))
-    results.append(test([w.text for w in sarcastic[:sarcasmlen]], [w.text for w in sincere[:sarcasmlen]], 1))
-    results.append(test([w.text for w in stressed[:relaxedlen]], [w.text for w in relaxed[:relaxedlen]], 1))
+    # results = [test([w.text for w in happy[:happylen]], [w.text for w in sad[:happylen]], 1)]
+    # results.append(test([w.text for w in courageous[:couragelen]], [w.text for w in fearful[:couragelen]], 1))
+    # results.append(test([w.text for w in sarcastic[:sarcasmlen]], [w.text for w in sincere[:sarcasmlen]], 1))
+    # results.append(test([w.text for w in stressed[:relaxedlen]], [w.text for w in relaxed[:relaxedlen]], 1))
+    # print(results)
+
+    results = []
+    predictorhappy = test([w.text for w in happy[:happylen]], [w.text for w in sad[:happylen]], 1)
+    results.append(predict(predictorhappy, ["Birthday"]))
+    predictorconfidence = test([w.text for w in courageous[:couragelen]], [w.text for w in fearful[:couragelen]], 1)
+    results.append(predict(predictorconfidence, ["Birthday"]))
+    predictorsarcasm = test([w.text for w in sarcastic[:sarcasmlen]], [w.text for w in sincere[:sarcasmlen]], 1)
+    results.append(predict(predictorsarcasm, ["Birthday"]))
+    predictorrelaxed = test([w.text for w in stressed[:relaxedlen]], [w.text for w in relaxed[:relaxedlen]], 1)
+    results.append(predict(predictorrelaxed, ["Birthday"]))
     print(results)
