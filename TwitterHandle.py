@@ -180,7 +180,7 @@ def predict(predictor, test_data):
 
     return predictedNB
 
-def test(positive: list, negative: list, seed: int):
+def test(positive: list, negative: list, seed: int, trainingFunction):
     all_data = positive + negative
 
     # creates a list of target values. Positive entries will be "1" and negative entries will be "0"
@@ -198,7 +198,11 @@ def test(positive: list, negative: list, seed: int):
     training_targets = targets[:int(.75 * len(targets))]
     test_targets = targets[int(.75 * len(targets)):]
 
-    predictor = trainNaiveBayes(training_data, training_targets)
+    predictor = None
+    if trainingFunction is None:
+        predictor = trainNaiveBayes(training_data, training_targets)
+    else:
+        predictor = trainingFunction(training_data, training_targets)
     predicted = predict(predictor, test_data)
 
     for text, prediction, target in zip(test_data, predicted, test_targets):
@@ -258,7 +262,7 @@ def trainNN(data: list, targets: list, seed):
     trainingds._convertToOneOfMany()
     testds._convertToOneOfMany()
 
-    net = buildNetwork( trainingds.indim, 20, 20, 20, trainingds.outdim, outclass=SoftmaxLayer )
+    net = buildNetwork( trainingds.indim, 10, 10, 10, trainingds.outdim, outclass=SoftmaxLayer )
     trainer = BackpropTrainer(net, dataset=trainingds, learningrate=.75, momentum=.1)
 
     for i in range(25):
