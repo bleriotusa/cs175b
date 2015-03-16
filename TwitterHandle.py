@@ -11,6 +11,11 @@ from TwitterAPI import TwitterRestPager
 from datetime import datetime
 import pickle
 from sklearn.feature_extraction.text import TfidfTransformer
+from pybrain.tools.shortcuts import buildNetwork
+from pybrain.supervised.trainers import BackpropTrainer
+from pybrain.datasets import ClassificationDataSet
+from pybrain.structure.modules import SoftmaxLayer
+from pybrain.utilities import percentError
 
 consumer_key = 'XKHtqeaKlCR9n4BG3MI5cwftj'
 consumer_secret = 'NcQXp5pStiFqJnPn3DjJZZyHRaNb7lV01lcOfZ4t42QfoA08pQ'
@@ -125,9 +130,9 @@ def remove_stop_word_tokenizer(s):
 
 count_vect = CountVectorizer()
 count_vect.tokenizer = remove_stop_word_tokenizer
-tfidf_transformer = TfidfTransformer()
+tfidf_transformer = TfidfTransformer(norm='l2', smooth_idf=True, sublinear_tf=False, use_idf=True)
 
-def train(data: list, targets: list):
+def trainNaiveBayes(data: list, targets: list):
     X_tweet_counts = count_vect.fit_transform(data)
 
     # Compute term frequencies and store in X_train_tf
@@ -138,6 +143,27 @@ def train(data: list, targets: list):
     from sklearn.naive_bayes import MultinomialNB
     return MultinomialNB().fit(X_train_tfidf, targets)
 
+def trainLogisticRegression(data: list, targets: list):
+    X_tweet_counts = count_vect.fit_transform(data)
+
+    # Compute term frequencies and store in X_train_tf
+    # Compute tfidf feature values and store in X_train_tfidf
+    X_train_tfidf = tfidf_transformer.fit_transform(X_tweet_counts)
+
+    # train and test a Multinomial Naive Bayes Classifier
+    from sklearn.linear_model.logistic import LogisticRegression
+    return LogisticRegression().fit(X_train_tfidf, targets)
+
+def trainSVM(data: list, targets: list):
+    X_tweet_counts = count_vect.fit_transform(data)
+
+    # Compute term frequencies and store in X_train_tf
+    # Compute tfidf feature values and store in X_train_tfidf
+    X_train_tfidf = tfidf_transformer.fit_transform(X_tweet_counts)
+
+    # train and test a Multinomial Naive Bayes Classifier
+    from sklearn.svm import SVC
+    return SVC().fit(X_train_tfidf, targets)
 
 def predict(predictor, test_data):
     # count_vect = CountVectorizer()
@@ -172,15 +198,100 @@ def test(positive: list, negative: list, seed: int):
     training_targets = targets[:int(.75 * len(targets))]
     test_targets = targets[int(.75 * len(targets)):]
 
-    predictor = train(training_data, training_targets)
+    predictor = trainNaiveBayes(training_data, training_targets)
     predicted = predict(predictor, test_data)
 
     for text, prediction, target in zip(test_data, predicted, test_targets):
         print(prediction, target, text)
 
-    print(predict(predictor, ["Men"]))
+    successes = [1 for prediction, target in zip(predicted, test_targets) if prediction == target]
+    print (len(successes) / len(test_data))
     return predictor
 
+
+def testNN(positive: list, negative: list, seed: int):
+    all_data = positive + negative
+
+    # creates a list of target values. Positive entries will be "1" and negative entries will be "0"
+    targets = [1] * len(positive)
+    targets = targets + ([0] * len(negative))
+
+    random.seed(seed)
+    random.shuffle(targets)
+    random.seed(seed)
+    random.shuffle(all_data)
+
+
+    predictor = trainNN(all_data, targets, seed)
+    # predicted = predictNN(predictor, test_data)
+
+    # for doc, category in zip(test_data, predicted):
+    #      print('%r %s' % (doc, category))
+    # print('\n')
+
+    return predictor
+
+
+def trainNN(data: list, targets: list, seed):
+    X_tweet_counts = count_vect.fit_transform(data)
+
+    # Compute term frequencies and store in X_train_tf
+    # Compute tfidf feature values and store in X_train_tfidf
+    X_train_tfidf = tfidf_transformer.fit_transform(X_tweet_counts)
+    arr = X_train_tfidf.toarray()
+
+    trainingdata = arr[:int(.75 * len(arr))]
+    testdata = arr[int(.75 * len(arr)):]
+    trainingtargets = targets[:int(.75 * len(targets))]
+    testtargets = targets[int(.75 * len(targets)):]
+
+
+    trainingds = ClassificationDataSet(len(arr[0]), 1, nb_classes=2)
+    testds = ClassificationDataSet(len(arr[0]), 1, nb_classes=2)
+
+
+    for index, data in enumerate(trainingdata):
+        trainingds.addSample(data, trainingtargets[index])
+    for index, data in enumerate(testdata):
+        testds.addSample(data, testtargets[index])
+
+    trainingds._convertToOneOfMany()
+    testds._convertToOneOfMany()
+
+    net = buildNetwork( trainingds.indim, 20, 20, 20, trainingds.outdim, outclass=SoftmaxLayer )
+    trainer = BackpropTrainer(net, dataset=trainingds, learningrate=.75, momentum=.1)
+
+    for i in range(25):
+        trainer.trainEpochs(1)
+        trnresult = percentError(trainer.testOnClassData(),
+                                 trainingds['class'])
+        tstresult = percentError(trainer.testOnClassData(
+                                 dataset=testds), testds['class'])
+
+        print("epoch: %4d" % trainer.totalepochs,
+                     "  train error: %5.2f%%" % trnresult,
+                     "  test error: %5.2f%%" % tstresult)
+
+    return net
+
+def predictNN(predictor, test_data):
+    # count_vect = CountVectorizer()
+    # count_vect.tokenizer = remove_stop_word_tokenizer
+
+    X_new_counts = count_vect.transform(test_data)
+    # tfidf_transformer = TfidfTransformer()
+    X_new_tfidf = tfidf_transformer.transform(X_new_counts)
+    arr = X_new_tfidf.toarray()
+    results = []
+    for index, data in enumerate(arr):
+        predictedNB = predictor.activate(data)
+        print(predictedNB)
+
+    # for doc, category in zip(test_data, predictedNB):
+    #      print('%r %s' % (doc, category))
+    # print('\n')
+
+    return results
 
 if __name__ == '__main__':
     #
@@ -191,39 +302,41 @@ if __name__ == '__main__':
     # pull_tweets(5000, 'relaxed')
     # pull_tweets(5000, 'stressed')
 
-    happy = list(read_all_data('happy'))
-    sad = list(read_all_data('sad'))
-    fearful = list(read_all_data('scary'))
-    courageous = list(read_all_data('courage'))
+    # happy = list(read_all_data('happy'))
+    # sad = list(read_all_data('sad'))
+    # fearful = list(read_all_data('scary'))
+    # courageous = list(read_all_data('courage'))
     sarcastic = list(read_all_data('sarcasm'))
-    sincere = list(read_all_data('serious'))
-    relaxed = list(read_all_data('relaxed'))
+    # sincere = list(read_all_data('serious'))
+    # relaxed = list(read_all_data('relaxed'))
     stressed = list(read_all_data('stressed'))
 
 
     # Ensures that the length of the two datasets are the same, so that there's a 50% chance of being right by default
-    happylen = min(len(happy), len(sad))
-    couragelen = min(len(fearful), len(courageous))
-    sarcasmlen = min(len(sarcastic), len(sincere))
-    relaxedlen = min(len(relaxed), len(stressed))
+    # happylen = min(len(happy), len(sad))
+    # couragelen = min(len(fearful), len(courageous))
+    sarcasmlen = min(len(sarcastic), len(stressed))
+    # relaxedlen = min(len(relaxed), len(stressed))
 
-
-    print(len(happy), len(sad), len(fearful), len(courageous),
-          len(sarcastic), len(sincere), len(relaxed), len(stressed))
-
-    # results = [test([w.text for w in happy[:happylen]], [w.text for w in sad[:happylen]], 1)]
-    # results.append(test([w.text for w in courageous[:couragelen]], [w.text for w in fearful[:couragelen]], 1))
-    # results.append(test([w.text for w in sarcastic[:sarcasmlen]], [w.text for w in sincere[:sarcasmlen]], 1))
-    # results.append(test([w.text for w in stressed[:relaxedlen]], [w.text for w in relaxed[:relaxedlen]], 1))
-    # print(results)
+    #
+    # print(len(happy), len(sad), len(fearful), len(courageous),
+    #       len(sarcastic), len(sincere), len(relaxed), len(stressed))
 
     results = []
-    predictorhappy = test([w.text for w in happy[:happylen]], [w.text for w in sad[:happylen]], 1)
-    results.append(predict(predictorhappy, ["Birthday"]))
-    predictorconfidence = test([w.text for w in courageous[:couragelen]], [w.text for w in fearful[:couragelen]], 1)
-    results.append(predict(predictorconfidence, ["Birthday"]))
-    predictorsarcasm = test([w.text for w in sarcastic[:sarcasmlen]], [w.text for w in sincere[:sarcasmlen]], 1)
-    results.append(predict(predictorsarcasm, ["Birthday"]))
-    predictorrelaxed = test([w.text for w in stressed[:relaxedlen]], [w.text for w in relaxed[:relaxedlen]], 1)
-    results.append(predict(predictorrelaxed, ["Birthday"]))
-    print(results)
+    # results = [test([w.text for w in happy[:happylen]], [w.text for w in sad[:happylen]], 1)]
+    # results.append(test([w.text for w in courageous[:couragelen]], [w.text for w in fearful[:couragelen]], 1))
+    # results.append(test([w.text for w in sarcastic[:sarcasmlen]], [w.text for w in stressed[:sarcasmlen]], 1))
+    # results.append(test([w.text for w in stressed[:relaxedlen]], [w.text for w in relaxed[:relaxedlen]], 1))
+    testNN([w.text for w in sarcastic[:sarcasmlen]], [w.text for w in stressed[:sarcasmlen]], 1)
+    # print(results)
+
+    # results = []
+    # predictorhappy = test([w.text for w in happy[:happylen]], [w.text for w in sad[:happylen]], 1)
+    # results.append(predict(predictorhappy, ["Birthday"]))
+    # predictorconfidence = test([w.text for w in courageous[:couragelen]], [w.text for w in fearful[:couragelen]], 1)
+    # results.append(predict(predictorconfidence, ["Birthday"]))
+    # predictorsarcasm = test([w.text for w in sarcastic[:sarcasmlen]], [w.text for w in sincere[:sarcasmlen]], 1)
+    # results.append(predict(predictorsarcasm, ["Birthday"]))
+    # predictorrelaxed = test([w.text for w in stressed[:relaxedlen]], [w.text for w in relaxed[:relaxedlen]], 1)
+    # results.append(predict(predictorrelaxed, ["Birthday"]))
+    # print(results)
