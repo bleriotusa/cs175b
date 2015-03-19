@@ -11,6 +11,10 @@ from TwitterAPI import TwitterRestPager
 from datetime import datetime
 import pickle
 from sklearn.feature_extraction.text import TfidfTransformer
+from sklearn.metrics import recall_score
+from sklearn.metrics import precision_score
+from sklearn.metrics import f1_score
+from sklearn.metrics import confusion_matrix
 from pybrain.tools.shortcuts import buildNetwork
 from pybrain.supervised.trainers import BackpropTrainer
 from pybrain.datasets import ClassificationDataSet
@@ -162,8 +166,8 @@ def trainSVM(data: list, targets: list):
     X_train_tfidf = tfidf_transformer.fit_transform(X_tweet_counts)
 
     # train and test a Multinomial Naive Bayes Classifier
-    from sklearn.svm import SVC
-    return SVC().fit(X_train_tfidf, targets)
+    from sklearn import svm
+    return svm.SVC().fit(X_train_tfidf, targets)
 
 def predict(predictor, test_data):
     # count_vect = CountVectorizer()
@@ -205,11 +209,20 @@ def test(positive: list, negative: list, seed: int, trainingFunction):
         predictor = trainingFunction(training_data, training_targets)
     predicted = predict(predictor, test_data)
 
-    for text, prediction, target in zip(test_data, predicted, test_targets):
-        print(prediction, target, text)
+    # for data, x, target in zip(test_data, predicted, test_targets):
+    #     print("{} {} {}".format(data, x, target))
+
 
     successes = [1 for prediction, target in zip(predicted, test_targets) if prediction == target]
-    print (len(successes) / len(test_data))
+
+
+    besttest = len(successes) / len(test_data)
+
+    print("Best test error accuracy: {:.4f}%".format(besttest))
+    print("Best test error f1 score: {:.4f}%".format(f1_score(test_targets, predicted, average='micro')))
+    print("Confusion Matrix:")
+    print(confusion_matrix(test_targets, predicted))
+
     return predictor
 
 
@@ -263,41 +276,37 @@ def trainNN(data: list, targets: list, seed):
     testds._convertToOneOfMany()
 
     net = buildNetwork( trainingds.indim, 10, 10, 10, trainingds.outdim, outclass=SoftmaxLayer )
-    trainer = BackpropTrainer(net, dataset=trainingds, learningrate=.75, momentum=.1)
+    trainer = BackpropTrainer(net, dataset=trainingds, learningrate=.65, momentum=.1)
 
-    for i in range(25):
+    besttrain = 99.9
+    besttest = 99.9
+    bestresults = []
+    bestclass = []
+
+    for i in range(20):
         trainer.trainEpochs(1)
-        trnresult = percentError(trainer.testOnClassData(),
-                                 trainingds['class'])
-        tstresult = percentError(trainer.testOnClassData(
-                                 dataset=testds), testds['class'])
+        trainresult = percentError(trainer.testOnClassData(), trainingds['class'])
+        teststuff = trainer.testOnClassData(dataset=testds)
+        testresult = percentError(teststuff, testds['class'])
+        if testresult < besttest:
+            besttest = testresult
+            besttrain = trainresult
+            bestresults = teststuff
+            bestclass = testds['class']
 
         print("epoch: %4d" % trainer.totalepochs,
-                     "  train error: %5.2f%%" % trnresult,
-                     "  test error: %5.2f%%" % tstresult)
+                     "  train error: %5.2f%%" % trainresult,
+                     "  test error: %5.2f%%" % testresult)
+    print("Best test error accuracy: {:.2f}%".format(besttest))
+    print("Best test error f1 score: {:.4f}%".format(f1_score(bestclass, bestresults, average='macro')))
+    print("Confusion Matrix:")
+    print(confusion_matrix(bestclass, bestresults))
 
-    return net
 
-def predictNN(predictor, test_data):
-    # count_vect = CountVectorizer()
-    # count_vect.tokenizer = remove_stop_word_tokenizer
-
-    X_new_counts = count_vect.transform(test_data)
-    # tfidf_transformer = TfidfTransformer()
-    X_new_tfidf = tfidf_transformer.transform(X_new_counts)
-    arr = X_new_tfidf.toarray()
-    results = []
-    for index, data in enumerate(arr):
-        predictedNB = predictor.activate(data)
-        print(predictedNB)
-
-    # for doc, category in zip(test_data, predictedNB):
-    #      print('%r %s' % (doc, category))
-    # print('\n')
-
-    return results
+    return besttest
 
 if __name__ == '__main__':
+    # pull_tweets(5000, 'sad')
     #
     # pull_tweets(5000, 'courage')
     # pull_tweets(5000, 'scared')
@@ -306,33 +315,58 @@ if __name__ == '__main__':
     # pull_tweets(5000, 'relaxed')
     # pull_tweets(5000, 'stressed')
 
-    # happy = list(read_all_data('happy'))
-    # sad = list(read_all_data('sad'))
-    # fearful = list(read_all_data('scary'))
-    # courageous = list(read_all_data('courage'))
+    happy = list(read_all_data('happy'))
+    sad = list(read_all_data('sad'))
+    fearful = list(read_all_data('scary'))
+    courageous = list(read_all_data('courage'))
     sarcastic = list(read_all_data('sarcasm'))
-    # sincere = list(read_all_data('serious'))
-    # relaxed = list(read_all_data('relaxed'))
+    sincere = list(read_all_data('serious'))
+    relaxed = list(read_all_data('relaxed'))
     stressed = list(read_all_data('stressed'))
 
 
     # Ensures that the length of the two datasets are the same, so that there's a 50% chance of being right by default
-    # happylen = min(len(happy), len(sad))
-    # couragelen = min(len(fearful), len(courageous))
-    sarcasmlen = min(len(sarcastic), len(stressed))
-    # relaxedlen = min(len(relaxed), len(stressed))
+    happylen = min(len(happy), len(sad))
+    couragelen = min(len(fearful), len(courageous), 3500)
+    sarcasmlen = min(len(sarcastic), len(sincere), 3500)
+    relaxedlen = min(len(relaxed), len(stressed), 3500)
 
-    #
+    # #
     # print(len(happy), len(sad), len(fearful), len(courageous),
     #       len(sarcastic), len(sincere), len(relaxed), len(stressed))
 
     results = []
-    # results = [test([w.text for w in happy[:happylen]], [w.text for w in sad[:happylen]], 1)]
-    # results.append(test([w.text for w in courageous[:couragelen]], [w.text for w in fearful[:couragelen]], 1))
-    # results.append(test([w.text for w in sarcastic[:sarcasmlen]], [w.text for w in stressed[:sarcasmlen]], 1))
-    # results.append(test([w.text for w in stressed[:relaxedlen]], [w.text for w in relaxed[:relaxedlen]], 1))
-    testNN([w.text for w in sarcastic[:sarcasmlen]], [w.text for w in stressed[:sarcasmlen]], 1)
-    # print(results)
+    # print("HappySadNN")
+    # results.append([testNN([w.text for w in happy[:happylen]], [w.text for w in sad[:happylen]], 1)])
+    print("HappySadNB")
+    results.append([test([w.text for w in happy[:happylen]], [w.text for w in sad[:happylen]], 1, trainNaiveBayes)])
+    print("HappySadLR")
+    results.append([test([w.text for w in happy[:happylen]], [w.text for w in sad[:happylen]], 1, trainLogisticRegression)])
+
+    #
+    # print("CourageNN")
+    # results.append(testNN([w.text for w in courageous[:couragelen]], [w.text for w in fearful[:couragelen]], 1))
+    # print("CourageNB")
+    # results.append(test([w.text for w in courageous[:couragelen]], [w.text for w in fearful[:couragelen]], 1, trainNaiveBayes))
+    # print("CourageLR")
+    # results.append(test([w.text for w in courageous[:couragelen]], [w.text for w in fearful[:couragelen]], 1, trainLogisticRegression))
+    #
+    # print("SarcasmNN")
+    # results.append(testNN([w.text for w in sarcastic[:sarcasmlen]], [w.text for w in sincere[:sarcasmlen]], 1))
+    # print("SarcasmNB")
+    # results.append(test([w.text for w in sarcastic[:sarcasmlen]], [w.text for w in sincere[:sarcasmlen]], 1, trainNaiveBayes))
+    # print("SarcasmLR")
+    # results.append(test([w.text for w in sarcastic[:sarcasmlen]], [w.text for w in sincere[:sarcasmlen]], 1, trainLogisticRegression))
+
+
+    # print("StressNN")
+    # results.append(testNN([w.text for w in stressed[:relaxedlen]], [w.text for w in relaxed[:relaxedlen]], 1))
+    # print("StressNB")
+    # results.append(test([w.text for w in stressed[:relaxedlen]], [w.text for w in relaxed[:relaxedlen]], 1, trainNaiveBayes))
+    # print("StressLR")
+    # results.append(test([w.text for w in stressed[:relaxedlen]], [w.text for w in relaxed[:relaxedlen]], 1, trainLogisticRegression))
+
+    # # print(results)
 
     # results = []
     # predictorhappy = test([w.text for w in happy[:happylen]], [w.text for w in sad[:happylen]], 1)
