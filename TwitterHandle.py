@@ -98,12 +98,14 @@ def read_data(filename: str) -> list:
         except EOFError:
             return set()
 
-
+all_data = set()
 def read_all_data(tone=None):
-    all_data = set()
-    for filename in glob.glob("data/*.txt"):
-        data = read_data(filename)
-        all_data.update(data)
+    global all_data
+    if not all_data:
+        all_data = set()
+        for filename in glob.glob("data/*.txt"):
+            data = read_data(filename)
+            all_data.update(data)
 
     # print(all_data)
 
