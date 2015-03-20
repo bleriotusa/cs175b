@@ -305,9 +305,9 @@ def trainNN(data: list, targets: list, seed):
             bestresults = teststuff
             bestclass = testds['class']
 
-        print("epoch: %4d" % trainer.totalepochs,
-              "  train error: %5.2f%%" % trainresult,
-              "  test error: %5.2f%%" % testresult)
+        print("epoch: %2d" % trainer.totalepochs)
+        print("train error: %2.2f%%" % trainresult)
+        print("test error: %2.2f%%" % testresult)
     print("Best test error accuracy: {:.2f}%".format(besttest))
     print("Best test error f1 score: {:.4f}%".format(f1_score(bestclass, bestresults, average='macro')))
     print("Confusion Matrix:")
@@ -315,6 +315,14 @@ def trainNN(data: list, targets: list, seed):
 
     return besttest
 
+def tweet_puller():
+    # pull_tweets(5000, 'sad')
+    # pull_tweets(10000, 'courage')
+    # pull_tweets(10000, 'scared')
+    # pull_tweets(10000, 'sarcasm')
+    pull_tweets(10000, 'serious')
+    pull_tweets(10000, 'relaxed')
+    pull_tweets(10000, 'stressed')
 
 def test_driver():
     happy = list(read_all_data('happy'))
@@ -333,73 +341,72 @@ def test_driver():
     sarcasmlen = min(len(sarcastic), len(sincere), 3500)
     relaxedlen = min(len(relaxed), len(stressed), 3500)
 
-    # #
-    print({'happy': len(happy), 'sad': len(sad), 'fearful': len(fearful), 'courageous': len(courageous),
-           'sarcastic': len(sarcastic), 'sincere': len(sincere), 'relaxed': len(relaxed), 'stressed': len(stressed)})
+    dataset_statistics(happy)
 
-    results = []
-    # print("HappySadNN")
-    # results.append([testNN([w.text for w in happy[:happylen]], [w.text for w in sad[:happylen]], 1)])
-    print("\n\nHappySadNB")
-    results.append([test([w.text for w in happy[:happylen]], [w.text for w in sad[:happylen]], 1, trainNaiveBayes)])
-    print("\nHappySadLR")
-    results.append(
-        [test([w.text for w in happy[:happylen]], [w.text for w in sad[:happylen]], 1, trainLogisticRegression)])
-    # print("HappySadLR")
-    # results.append([test([w.text for w in happy[:happylen]], [w.text for w in sad[:happylen]], 1, trainSVM)])
+    # # #
+    # # print(len(happy), len(sad), len(fearful), len(courageous),
+    # #       len(sarcastic), len(sincere), len(relaxed), len(stressed))
     #
-    # print("CourageNN")
-    # results.append(testNN([w.text for w in courageous[:couragelen]], [w.text for w in fearful[:couragelen]], 1))
-    print("\n\nCourageNB")
-    results.append(
-        test([w.text for w in courageous[:couragelen]], [w.text for w in fearful[:couragelen]], 1, trainNaiveBayes))
-    print("\nCourageLR")
-    results.append(test([w.text for w in courageous[:couragelen]], [w.text for w in fearful[:couragelen]], 1,
-                        trainLogisticRegression))
-    #
-    # print("SarcasmNN")
-    # results.append(testNN([w.text for w in sarcastic[:sarcasmlen]], [w.text for w in sincere[:sarcasmlen]], 1))
-    print("\n\nSarcasmNB")
-    results.append(
-        test([w.text for w in sarcastic[:sarcasmlen]], [w.text for w in sincere[:sarcasmlen]], 1, trainNaiveBayes))
-    print("\nSarcasmLR")
-    results.append(test([w.text for w in sarcastic[:sarcasmlen]], [w.text for w in sincere[:sarcasmlen]], 1,
-                        trainLogisticRegression))
-
-
-    # print("StressNN")
-    # results.append(testNN([w.text for w in stressed[:relaxedlen]], [w.text for w in relaxed[:relaxedlen]], 1))
-    print("\n\nStressNB")
-    results.append(
-        test([w.text for w in stressed[:relaxedlen]], [w.text for w in relaxed[:relaxedlen]], 1, trainNaiveBayes))
-    print("\nStressLR")
-    results.append(test([w.text for w in stressed[:relaxedlen]], [w.text for w in relaxed[:relaxedlen]], 1,
-                        trainLogisticRegression))
-
-    # # print(results)
-
     # results = []
-    # predictorhappy = test([w.text for w in happy[:happylen]], [w.text for w in sad[:happylen]], 1)
-    # results.append(predict(predictorhappy, ["Birthday"]))
-    # predictorconfidence = test([w.text for w in courageous[:couragelen]], [w.text for w in fearful[:couragelen]], 1)
-    # results.append(predict(predictorconfidence, ["Birthday"]))
-    # predictorsarcasm = test([w.text for w in sarcastic[:sarcasmlen]], [w.text for w in sincere[:sarcasmlen]], 1)
-    # results.append(predict(predictorsarcasm, ["Birthday"]))
-    # predictorrelaxed = test([w.text for w in stressed[:relaxedlen]], [w.text for w in relaxed[:relaxedlen]], 1)
-    # results.append(predict(predictorrelaxed, ["Birthday"]))
-    # print(results)
+    # # print("HappySadNN")
+    # # results.append([testNN([w.text for w in happy[:happylen]], [w.text for w in sad[:happylen]], 1)])
+    # print("HappySadNB")
+    # results.append([test([w.text for w in happy[:happylen]], [w.text for w in sad[:happylen]], 1, trainNaiveBayes)])
+    # print("HappySadLR")
+    # results.append([test([w.text for w in happy[:happylen]], [w.text for w in sad[:happylen]], 1, trainLogisticRegression)])
+    #
+    # #
+    # # print("CourageNN")
+    # # results.append(testNN([w.text for w in courageous[:couragelen]], [w.text for w in fearful[:couragelen]], 1))
+    # # print("CourageNB")
+    # # results.append(test([w.text for w in courageous[:couragelen]], [w.text for w in fearful[:couragelen]], 1, trainNaiveBayes))
+    # # print("CourageLR")
+    # # results.append(test([w.text for w in courageous[:couragelen]], [w.text for w in fearful[:couragelen]], 1, trainLogisticRegression))
+    # #
+    # # print("SarcasmNN")
+    # # results.append(testNN([w.text for w in sarcastic[:sarcasmlen]], [w.text for w in sincere[:sarcasmlen]], 1))
+    # # print("SarcasmNB")
+    # # results.append(test([w.text for w in sarcastic[:sarcasmlen]], [w.text for w in sincere[:sarcasmlen]], 1, trainNaiveBayes))
+    # # print("SarcasmLR")
+    # # results.append(test([w.text for w in sarcastic[:sarcasmlen]], [w.text for w in sincere[:sarcasmlen]], 1, trainLogisticRegression))
+    #
+    #
+    # # print("StressNN")
+    # # results.append(testNN([w.text for w in stressed[:relaxedlen]], [w.text for w in relaxed[:relaxedlen]], 1))
+    # # print("StressNB")
+    # # results.append(test([w.text for w in stressed[:relaxedlen]], [w.text for w in relaxed[:relaxedlen]], 1, trainNaiveBayes))
+    # # print("StressLR")
+    # # results.append(test([w.text for w in stressed[:relaxedlen]], [w.text for w in relaxed[:relaxedlen]], 1, trainLogisticRegression))
+    #
+    # # # print(results)
+    #
+    # # results = []
+    # # predictorhappy = test([w.text for w in happy[:happylen]], [w.text for w in sad[:happylen]], 1)
+    # # results.append(predict(predictorhappy, ["Birthday"]))
+    # # predictorconfidence = test([w.text for w in courageous[:couragelen]], [w.text for w in fearful[:couragelen]], 1)
+    # # results.append(predict(predictorconfidence, ["Birthday"]))
+    # # predictorsarcasm = test([w.text for w in sarcastic[:sarcasmlen]], [w.text for w in sincere[:sarcasmlen]], 1)
+    # # results.append(predict(predictorsarcasm, ["Birthday"]))
 
+def dataset_statistics(dataset):
 
-def tweet_puller():
-    # pull_tweets(5000, 'sad')
-    # pull_tweets(10000, 'courage')
-    # pull_tweets(10000, 'scared')
-    # pull_tweets(10000, 'sarcasm')
-    pull_tweets(10000, 'serious')
-    pull_tweets(10000, 'relaxed')
-    pull_tweets(10000, 'stressed')
+    data = [w.text for w in dataset]
+    character_count = 0
+    for i in data:
+        character_count += len(i)
+    avg_length = character_count / len(data)
+    print("Average length of document is ", avg_length)
+    tweet_counts = count_vect.fit_transform(data)
+    num_non_zero = tweet_counts.nnz
+
+    print('Dimensions of X_tweet_counts are',tweet_counts.shape)
+    print('Number of non-zero elements in x_tweet_counts:', num_non_zero)
 
 
 if __name__ == '__main__':
     # tweet_puller()
     test_driver()
+
+    # # predictorrelaxed = test([w.text for w in stressed[:relaxedlen]], [w.text for w in relaxed[:relaxedlen]], 1)
+    # # results.append(predict(predictorrelaxed, ["Birthday"]))
+    # # print(results)
