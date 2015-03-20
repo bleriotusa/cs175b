@@ -316,10 +316,10 @@ def trainNN(data: list, targets: list, seed):
     return besttest
 
 def tweet_puller():
-    # pull_tweets(5000, 'sad')
-    # pull_tweets(10000, 'courage')
-    # pull_tweets(10000, 'scared')
-    # pull_tweets(10000, 'sarcasm')
+    pull_tweets(5000, 'sad')
+    pull_tweets(10000, 'courage')
+    pull_tweets(10000, 'scared')
+    pull_tweets(10000, 'sarcasm')
     pull_tweets(10000, 'serious')
     pull_tweets(10000, 'relaxed')
     pull_tweets(10000, 'stressed')
@@ -344,8 +344,8 @@ def test_driver():
     dataset_statistics(happy)
 
     # # #
-    # # print(len(happy), len(sad), len(fearful), len(courageous),
-    # #       len(sarcastic), len(sincere), len(relaxed), len(stressed))
+    print({'happy': len(happy), 'sad': len(sad), 'fearful': len(fearful), 'courageous': len(courageous),
+          'sarcastic': len(sarcastic), 'sincere': len(sincere), 'relaxed': len(relaxed), 'stressed': len(stressed)})
     #
     # results = []
     # # print("HappySadNN")
@@ -395,7 +395,7 @@ def dataset_statistics(dataset):
     for i in data:
         character_count += len(i)
     avg_length = character_count / len(data)
-    print("Average length of document is ", avg_length)
+    print("Average length of document is {} characters".format(avg_length))
     tweet_counts = count_vect.fit_transform(data)
     num_non_zero = tweet_counts.nnz
 
