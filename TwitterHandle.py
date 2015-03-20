@@ -1,4 +1,11 @@
 __author__ = 'Michael'
+
+"""
+CS 175 UCI AI Project Class by Michael and Kelvin.
+This module contains all the classes and functions used to represent the data, train the classifier, and test the
+classifier.
+"""
+
 import time
 import glob
 import random
@@ -43,9 +50,7 @@ class Tweet:
 
 def pull_tweets(tweets: int, hashtag: str) -> None:
     """
-    Pulls specified number of tweets and writes them into file. Layout is:
-        odd lines - hashtag list
-        even lines - text or tweet message
+    Pulls specified number of tweets and writes them into file as Pickled python sets.
     :param tweets: number of tweets to pull
     :return: None
     """
@@ -86,6 +91,7 @@ def pull_tweets(tweets: int, hashtag: str) -> None:
 
 def read_data(filename: str) -> list:
     """
+    Helper function for the read_all_data function. reads one file and returns the set contained in it.
     :param filename: file to read from
     :return: list of Tweet objects
     """
@@ -101,6 +107,12 @@ all_data = set()
 
 
 def read_all_data(tone=None):
+    """
+    Reads all the data contained in all the files we have dumped so far. Returns a set that corresponds to the
+    tweets that have the parameter tone.
+    :param tone: the target tone (hashtag) that you want the tweets to have.
+    :return:
+    """
     global all_data
 
     # retrieve all data from stored files once
@@ -126,6 +138,9 @@ from sklearn.feature_extraction.text import CountVectorizer
 
 
 def remove_stop_word_tokenizer(s):
+    """
+    Custom tokenizer
+    """
     count_vect = CountVectorizer()
     default_tokenizer_function = count_vect.build_tokenizer()
     words = default_tokenizer_function(s)
@@ -139,6 +154,12 @@ tfidf_transformer = TfidfTransformer(norm='l2', smooth_idf=True, sublinear_tf=Fa
 
 
 def trainNaiveBayes(data: list, targets: list):
+    """
+    Trains a Naive Bayes classifier with the SciKitLearn modules
+    :param data: list of tweets
+    :param targets: list of associated targets for each tweet
+    :return: Predictor
+    """
     X_tweet_counts = count_vect.fit_transform(data)
 
     # Compute term frequencies and store in X_train_tf
@@ -152,6 +173,12 @@ def trainNaiveBayes(data: list, targets: list):
 
 
 def trainLogisticRegression(data: list, targets: list):
+    """
+    Trains a Logistic Regression classifier with the SciKitLearn modules
+    :param data: list of tweets
+    :param targets: list of associated targets for each tweet
+    :return: Predictor
+    """
     X_tweet_counts = count_vect.fit_transform(data)
 
     # Compute term frequencies and store in X_train_tf
@@ -178,6 +205,12 @@ def trainSVM(data: list, targets: list):
 
 
 def predict(predictor, test_data):
+    """
+    Uses the predictor to run a prediction against all tweets in test_data
+    :param predictor: classifier trained from one of our train functions
+    :param test_data: Tweets that we want to predict with
+    :return: An iterable that contains all the results of the predictions
+    """
     X_new_counts = count_vect.transform(test_data)
     X_new_tfidf = tfidf_transformer.transform(X_new_counts)
     predictedNB = predictor.predict(X_new_tfidf)
@@ -232,12 +265,16 @@ def test(positive: list, negative: list, seed: int, trainingFunction, use_f):
     print("Best test error accuracy: {:.4f}%".format(besttest))
     print("Best test error f1 score: {:.4f}%".format(f1_score(test_targets, predicted, average='micro')))
     print("Confusion Matrix:")
+    print(test_targets)
     print(confusion_matrix(test_targets, predicted))
 
     return predictor
 
 
 def testNN(positive: list, negative: list, seed: int):
+    """
+    Tests a neural network
+    """
     all_data = positive + negative
 
     # creates a list of target values. Positive entries will be "1" and negative entries will be "0"
@@ -260,6 +297,9 @@ def testNN(positive: list, negative: list, seed: int):
 
 
 def trainNN(data: list, targets: list, seed):
+    """
+    Trains a neural network
+    """
     X_tweet_counts = count_vect.fit_transform(data)
 
     # Compute term frequencies and store in X_train_tf
@@ -314,6 +354,15 @@ def trainNN(data: list, targets: list, seed):
 
 
 def test_category(name: str, pos_data, neg_data, use_f):
+    """
+    Tests a given category by running our test function on all our classifiers
+    :param name: Classifier name
+    :param pos_data: test positive data
+    :param neg_data: test negative data
+    :param use_f: To use 50/50 pos negative (False) or to use an F-score to balance it out
+    :return:
+    """
+
     # IF we don't want to use an F_score to correct for dataset length,
     # this ensures that the length of the two datasets are the same, so that there's a 50% chance of being right by default
     length = max(len(pos_data), len(neg_data)) if use_f else min(len(pos_data), len(neg_data))
@@ -322,7 +371,7 @@ def test_category(name: str, pos_data, neg_data, use_f):
     print("-" * len(name))
     # print("{}NN".format(name))
     # results.append(
-    #     [testNN([w.text for w in pos_data[:3500]], [w.text for w in neg_data[:3500]], 1)])
+    # [testNN([w.text for w in pos_data[:3500]], [w.text for w in neg_data[:3500]], 1)])
     print("{}NB".format(name))
     results.append(
         [test([w.text for w in pos_data[:length]], [w.text for w in neg_data[:length]], 1, trainNaiveBayes, use_f)])
@@ -357,6 +406,10 @@ def tweet_puller():
 
 
 def test_driver():
+    """
+    Main driver for restoring data into our program and calling the training/test functions.
+    :return: None
+    """
     happy = list(read_all_data('happy'))
     sad = list(read_all_data('sad'))
     fearful = list(read_all_data('scary'))
