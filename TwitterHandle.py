@@ -5,6 +5,7 @@ import glob
 import nltk
 import random
 from nltk.corpus import stopwords
+
 stopwordslist = stopwords.words('english')
 from TwitterAPI import TwitterAPI
 from TwitterAPI import TwitterRestPager
@@ -98,7 +99,10 @@ def read_data(filename: str) -> list:
         except EOFError:
             return set()
 
+
 all_data = set()
+
+
 def read_all_data(tone=None):
     global all_data
     if not all_data:
@@ -112,12 +116,13 @@ def read_all_data(tone=None):
     target_data = {tweet for tweet in all_data if tweet.target == tone} if tone else all_data
 
     import re
+
     if tone:
         tone_replace = re.compile(re.escape(tone), re.IGNORECASE)
         for tweet in target_data:
             tweet.text = tone_replace.sub('', tweet.text)
     # for tweet in target_data:
-    #     print('{}: {}\n\t{}'.format(tweet.target, tweet.hashtags, tweet.text))
+    # print('{}: {}\n\t{}'.format(tweet.target, tweet.hashtags, tweet.text))
 
     return target_data
 
@@ -138,6 +143,7 @@ count_vect = CountVectorizer()
 count_vect.tokenizer = remove_stop_word_tokenizer
 tfidf_transformer = TfidfTransformer(norm='l2', smooth_idf=True, sublinear_tf=False, use_idf=True)
 
+
 def trainNaiveBayes(data: list, targets: list):
     X_tweet_counts = count_vect.fit_transform(data)
 
@@ -147,7 +153,9 @@ def trainNaiveBayes(data: list, targets: list):
 
     # train and test a Multinomial Naive Bayes Classifier
     from sklearn.naive_bayes import MultinomialNB
+
     return MultinomialNB().fit(X_train_tfidf, targets)
+
 
 def trainLogisticRegression(data: list, targets: list):
     X_tweet_counts = count_vect.fit_transform(data)
@@ -156,9 +164,11 @@ def trainLogisticRegression(data: list, targets: list):
     # Compute tfidf feature values and store in X_train_tfidf
     X_train_tfidf = tfidf_transformer.fit_transform(X_tweet_counts)
 
-    # train and test a Multinomial Naive Bayes Classifier
+    # train and test a Logistic Regression Classifier
     from sklearn.linear_model.logistic import LogisticRegression
+
     return LogisticRegression().fit(X_train_tfidf, targets)
+
 
 def trainSVM(data: list, targets: list):
     X_tweet_counts = count_vect.fit_transform(data)
@@ -167,9 +177,11 @@ def trainSVM(data: list, targets: list):
     # Compute tfidf feature values and store in X_train_tfidf
     X_train_tfidf = tfidf_transformer.fit_transform(X_tweet_counts)
 
-    # train and test a Multinomial Naive Bayes Classifier
+    # train and test a SVM Classifier
     from sklearn import svm
+
     return svm.SVC().fit(X_train_tfidf, targets)
+
 
 def predict(predictor, test_data):
     # count_vect = CountVectorizer()
@@ -181,10 +193,11 @@ def predict(predictor, test_data):
     predictedNB = predictor.predict(X_new_tfidf)
 
     # for doc, category in zip(test_data, predictedNB):
-    #      print('%r %s' % (doc, category))
+    # print('%r %s' % (doc, category))
     # print('\n')
 
     return predictedNB
+
 
 def test(positive: list, negative: list, seed: int, trainingFunction):
     all_data = positive + negative
@@ -212,11 +225,10 @@ def test(positive: list, negative: list, seed: int, trainingFunction):
     predicted = predict(predictor, test_data)
 
     # for data, x, target in zip(test_data, predicted, test_targets):
-    #     print("{} {} {}".format(data, x, target))
+    # print("{} {} {}".format(data, x, target))
 
 
     successes = [1 for prediction, target in zip(predicted, test_targets) if prediction == target]
-
 
     besttest = len(successes) / len(test_data)
 
@@ -240,12 +252,11 @@ def testNN(positive: list, negative: list, seed: int):
     random.seed(seed)
     random.shuffle(all_data)
 
-
     predictor = trainNN(all_data, targets, seed)
     # predicted = predictNN(predictor, test_data)
 
     # for doc, category in zip(test_data, predicted):
-    #      print('%r %s' % (doc, category))
+    # print('%r %s' % (doc, category))
     # print('\n')
 
     return predictor
@@ -264,10 +275,8 @@ def trainNN(data: list, targets: list, seed):
     trainingtargets = targets[:int(.75 * len(targets))]
     testtargets = targets[int(.75 * len(targets)):]
 
-
     trainingds = ClassificationDataSet(len(arr[0]), 1, nb_classes=2)
     testds = ClassificationDataSet(len(arr[0]), 1, nb_classes=2)
-
 
     for index, data in enumerate(trainingdata):
         trainingds.addSample(data, trainingtargets[index])
@@ -277,7 +286,7 @@ def trainNN(data: list, targets: list, seed):
     trainingds._convertToOneOfMany()
     testds._convertToOneOfMany()
 
-    net = buildNetwork( trainingds.indim, 10, 10, 10, trainingds.outdim, outclass=SoftmaxLayer )
+    net = buildNetwork(trainingds.indim, 10, 10, 10, trainingds.outdim, outclass=SoftmaxLayer)
     trainer = BackpropTrainer(net, dataset=trainingds, learningrate=.65, momentum=.1)
 
     besttrain = 99.9
@@ -297,26 +306,17 @@ def trainNN(data: list, targets: list, seed):
             bestclass = testds['class']
 
         print("epoch: %4d" % trainer.totalepochs,
-                     "  train error: %5.2f%%" % trainresult,
-                     "  test error: %5.2f%%" % testresult)
+              "  train error: %5.2f%%" % trainresult,
+              "  test error: %5.2f%%" % testresult)
     print("Best test error accuracy: {:.2f}%".format(besttest))
     print("Best test error f1 score: {:.4f}%".format(f1_score(bestclass, bestresults, average='macro')))
     print("Confusion Matrix:")
     print(confusion_matrix(bestclass, bestresults))
 
-
     return besttest
 
-if __name__ == '__main__':
-    # pull_tweets(5000, 'sad')
-    #
-    # pull_tweets(5000, 'courage')
-    # pull_tweets(5000, 'scared')
-    # pull_tweets(5000, 'sarcasm')
-    # pull_tweets(5000, 'serious')
-    # pull_tweets(5000, 'relaxed')
-    # pull_tweets(5000, 'stressed')
 
+def test_driver():
     happy = list(read_all_data('happy'))
     sad = list(read_all_data('sad'))
     fearful = list(read_all_data('scary'))
@@ -334,39 +334,47 @@ if __name__ == '__main__':
     relaxedlen = min(len(relaxed), len(stressed), 3500)
 
     # #
-    # print(len(happy), len(sad), len(fearful), len(courageous),
-    #       len(sarcastic), len(sincere), len(relaxed), len(stressed))
+    print({'happy': len(happy), 'sad': len(sad), 'fearful': len(fearful), 'courageous': len(courageous),
+           'sarcastic': len(sarcastic), 'sincere': len(sincere), 'relaxed': len(relaxed), 'stressed': len(stressed)})
 
     results = []
     # print("HappySadNN")
     # results.append([testNN([w.text for w in happy[:happylen]], [w.text for w in sad[:happylen]], 1)])
-    print("HappySadNB")
+    print("\n\nHappySadNB")
     results.append([test([w.text for w in happy[:happylen]], [w.text for w in sad[:happylen]], 1, trainNaiveBayes)])
-    print("HappySadLR")
-    results.append([test([w.text for w in happy[:happylen]], [w.text for w in sad[:happylen]], 1, trainLogisticRegression)])
-
+    print("\nHappySadLR")
+    results.append(
+        [test([w.text for w in happy[:happylen]], [w.text for w in sad[:happylen]], 1, trainLogisticRegression)])
+    # print("HappySadLR")
+    # results.append([test([w.text for w in happy[:happylen]], [w.text for w in sad[:happylen]], 1, trainSVM)])
     #
     # print("CourageNN")
     # results.append(testNN([w.text for w in courageous[:couragelen]], [w.text for w in fearful[:couragelen]], 1))
-    # print("CourageNB")
-    # results.append(test([w.text for w in courageous[:couragelen]], [w.text for w in fearful[:couragelen]], 1, trainNaiveBayes))
-    # print("CourageLR")
-    # results.append(test([w.text for w in courageous[:couragelen]], [w.text for w in fearful[:couragelen]], 1, trainLogisticRegression))
+    print("\n\nCourageNB")
+    results.append(
+        test([w.text for w in courageous[:couragelen]], [w.text for w in fearful[:couragelen]], 1, trainNaiveBayes))
+    print("\nCourageLR")
+    results.append(test([w.text for w in courageous[:couragelen]], [w.text for w in fearful[:couragelen]], 1,
+                        trainLogisticRegression))
     #
     # print("SarcasmNN")
     # results.append(testNN([w.text for w in sarcastic[:sarcasmlen]], [w.text for w in sincere[:sarcasmlen]], 1))
-    # print("SarcasmNB")
-    # results.append(test([w.text for w in sarcastic[:sarcasmlen]], [w.text for w in sincere[:sarcasmlen]], 1, trainNaiveBayes))
-    # print("SarcasmLR")
-    # results.append(test([w.text for w in sarcastic[:sarcasmlen]], [w.text for w in sincere[:sarcasmlen]], 1, trainLogisticRegression))
+    print("\n\nSarcasmNB")
+    results.append(
+        test([w.text for w in sarcastic[:sarcasmlen]], [w.text for w in sincere[:sarcasmlen]], 1, trainNaiveBayes))
+    print("\nSarcasmLR")
+    results.append(test([w.text for w in sarcastic[:sarcasmlen]], [w.text for w in sincere[:sarcasmlen]], 1,
+                        trainLogisticRegression))
 
 
     # print("StressNN")
     # results.append(testNN([w.text for w in stressed[:relaxedlen]], [w.text for w in relaxed[:relaxedlen]], 1))
-    # print("StressNB")
-    # results.append(test([w.text for w in stressed[:relaxedlen]], [w.text for w in relaxed[:relaxedlen]], 1, trainNaiveBayes))
-    # print("StressLR")
-    # results.append(test([w.text for w in stressed[:relaxedlen]], [w.text for w in relaxed[:relaxedlen]], 1, trainLogisticRegression))
+    print("\n\nStressNB")
+    results.append(
+        test([w.text for w in stressed[:relaxedlen]], [w.text for w in relaxed[:relaxedlen]], 1, trainNaiveBayes))
+    print("\nStressLR")
+    results.append(test([w.text for w in stressed[:relaxedlen]], [w.text for w in relaxed[:relaxedlen]], 1,
+                        trainLogisticRegression))
 
     # # print(results)
 
@@ -380,3 +388,18 @@ if __name__ == '__main__':
     # predictorrelaxed = test([w.text for w in stressed[:relaxedlen]], [w.text for w in relaxed[:relaxedlen]], 1)
     # results.append(predict(predictorrelaxed, ["Birthday"]))
     # print(results)
+
+
+def tweet_puller():
+    # pull_tweets(5000, 'sad')
+    # pull_tweets(10000, 'courage')
+    # pull_tweets(10000, 'scared')
+    # pull_tweets(10000, 'sarcasm')
+    pull_tweets(10000, 'serious')
+    pull_tweets(10000, 'relaxed')
+    pull_tweets(10000, 'stressed')
+
+
+if __name__ == '__main__':
+    # tweet_puller()
+    test_driver()
