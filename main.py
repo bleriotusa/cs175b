@@ -265,7 +265,6 @@ def test(positive: list, negative: list, seed: int, trainingFunction, use_f):
     print("Best test error accuracy: {:.4f}%".format(besttest))
     print("Best test error f1 score: {:.4f}%".format(f1_score(test_targets, predicted, average='micro')))
     print("Confusion Matrix:")
-    print(test_targets)
     print(confusion_matrix(test_targets, predicted))
 
     return predictor
