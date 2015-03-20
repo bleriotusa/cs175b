@@ -1,8 +1,6 @@
 __author__ = 'Michael'
-import ast
 import time
 import glob
-import nltk
 import random
 from nltk.corpus import stopwords
 
@@ -12,8 +10,6 @@ from TwitterAPI import TwitterRestPager
 from datetime import datetime
 import pickle
 from sklearn.feature_extraction.text import TfidfTransformer
-from sklearn.metrics import recall_score
-from sklearn.metrics import precision_score
 from sklearn.metrics import f1_score
 from sklearn.metrics import confusion_matrix
 from pybrain.tools.shortcuts import buildNetwork
@@ -60,10 +56,11 @@ def pull_tweets(tweets: int, hashtag: str) -> None:
     api = TwitterAPI(consumer_key, consumer_secret, access_token_key, access_token_secret)
 
     data_file = open('data/{}{}'.format(str(start_time), '.txt'), 'wb+')
+
+    # use this so that we don't retrieve tweets that we have already gotten
     r = TwitterRestPager(api, 'search/tweets', {'q': '#{}'.format(hashtag), 'count': 100, 'lang': 'en'})
 
     tweet_set = set()
-    # while len(tweet_set) < tweets:
     for item in r.get_iterator():
         tweet = Tweet()
         if len(tweet_set) >= tweets:
@@ -105,13 +102,13 @@ all_data = set()
 
 def read_all_data(tone=None):
     global all_data
+
+    # retrieve all data from stored files once
     if not all_data:
         all_data = set()
         for filename in glob.glob("data/*.txt"):
             data = read_data(filename)
             all_data.update(data)
-
-    # print(all_data)
 
     target_data = {tweet for tweet in all_data if tweet.target == tone} if tone else all_data
 
@@ -121,8 +118,6 @@ def read_all_data(tone=None):
         tone_replace = re.compile(re.escape(tone), re.IGNORECASE)
         for tweet in target_data:
             tweet.text = tone_replace.sub('', tweet.text)
-    # for tweet in target_data:
-    # print('{}: {}\n\t{}'.format(tweet.target, tweet.hashtags, tweet.text))
 
     return target_data
 
@@ -130,7 +125,6 @@ def read_all_data(tone=None):
 from sklearn.feature_extraction.text import CountVectorizer
 
 
-# Override default countvectorizer tokenizer to remove stopwords
 def remove_stop_word_tokenizer(s):
     count_vect = CountVectorizer()
     default_tokenizer_function = count_vect.build_tokenizer()
@@ -184,35 +178,42 @@ def trainSVM(data: list, targets: list):
 
 
 def predict(predictor, test_data):
-    # count_vect = CountVectorizer()
-    # count_vect.tokenizer = remove_stop_word_tokenizer
-
     X_new_counts = count_vect.transform(test_data)
-    # tfidf_transformer = TfidfTransformer()
     X_new_tfidf = tfidf_transformer.transform(X_new_counts)
     predictedNB = predictor.predict(X_new_tfidf)
-
-    # for doc, category in zip(test_data, predictedNB):
-    # print('%r %s' % (doc, category))
-    # print('\n')
 
     return predictedNB
 
 
-def test(positive: list, negative: list, seed: int, trainingFunction):
-    all_data = positive + negative
+def test(positive: list, negative: list, seed: int, trainingFunction, use_f):
+    """
+    Trains and tests our classifiers.
+        1. Combine test data
+        2. Shuffle test data and verification targets with same seed
+        3. Train data with 75% of data and retrieve predictor
+        4. Use predictor on other 25% of the data
+        5. Retrieve the number of predictions that are correct
+        6. Report the percentage correct as well as F-Score
+    :param positive: positive tone tweets of the category
+    :param negative: negative tone tweets of the category
+    :param seed: the random generator seed used on both training and targets
+    :param trainingFunction: which type classifier to train
+    :param use_f: use the f-score to balance for amounts or have 50/50 pos / negative data
+    :return: predictor that we trained
+    """
+    all_test_data = positive + negative
 
     # creates a list of target values. Positive entries will be "1" and negative entries will be "0"
     targets = [1] * len(positive)
     targets = targets + ([0] * len(negative))
 
     random.seed(seed)
-    random.shuffle(all_data)
+    random.shuffle(all_test_data)
     random.seed(seed)
     random.shuffle(targets)
 
-    training_data = all_data[:int(.75 * len(all_data))]
-    test_data = all_data[int(.75 * len(all_data)):]
+    training_data = all_test_data[:int(.75 * len(all_test_data))]
+    test_data = all_test_data[int(.75 * len(all_test_data)):]
 
     training_targets = targets[:int(.75 * len(targets))]
     test_targets = targets[int(.75 * len(targets)):]
@@ -223,10 +224,6 @@ def test(positive: list, negative: list, seed: int, trainingFunction):
     else:
         predictor = trainingFunction(training_data, training_targets)
     predicted = predict(predictor, test_data)
-
-    # for data, x, target in zip(test_data, predicted, test_targets):
-    # print("{} {} {}".format(data, x, target))
-
 
     successes = [1 for prediction, target in zip(predicted, test_targets) if prediction == target]
 
@@ -315,6 +312,40 @@ def trainNN(data: list, targets: list, seed):
 
     return besttest
 
+
+def test_category(name: str, pos_data, neg_data, use_f):
+    # IF we don't want to use an F_score to correct for dataset length,
+    # this ensures that the length of the two datasets are the same, so that there's a 50% chance of being right by default
+    length = max(len(pos_data), len(neg_data)) if use_f else min(len(pos_data), len(neg_data))
+    results = []
+    print("\n\nCategory: {}".format(name))
+    print("-" * len(name))
+    # print("{}NN".format(name))
+    # results.append(
+    #     [testNN([w.text for w in pos_data[:3500]], [w.text for w in neg_data[:3500]], 1)])
+    print("{}NB".format(name))
+    results.append(
+        [test([w.text for w in pos_data[:length]], [w.text for w in neg_data[:length]], 1, trainNaiveBayes, use_f)])
+    print("\n{}LR".format(name))
+    results.append([
+        test([w.text for w in pos_data[:length]], [w.text for w in neg_data[:length]], 1, trainLogisticRegression,
+             use_f)])
+
+
+def dataset_statistics(dataset):
+    data = [w.text for w in dataset]
+    character_count = 0
+    for i in data:
+        character_count += len(i)
+    avg_length = character_count / len(data)
+    print("Average length of document is {} characters".format(avg_length))
+    tweet_counts = count_vect.fit_transform(data)
+    num_non_zero = tweet_counts.nnz
+
+    print('Dimensions of X_tweet_counts are', tweet_counts.shape)
+    print('Number of non-zero elements in x_tweet_counts:', num_non_zero)
+
+
 def tweet_puller():
     pull_tweets(5000, 'sad')
     pull_tweets(10000, 'courage')
@@ -323,6 +354,7 @@ def tweet_puller():
     pull_tweets(10000, 'serious')
     pull_tweets(10000, 'relaxed')
     pull_tweets(10000, 'stressed')
+
 
 def test_driver():
     happy = list(read_all_data('happy'))
@@ -334,79 +366,17 @@ def test_driver():
     relaxed = list(read_all_data('relaxed'))
     stressed = list(read_all_data('stressed'))
 
-
-    # Ensures that the length of the two datasets are the same, so that there's a 50% chance of being right by default
-    happylen = min(len(happy), len(sad))
-    couragelen = min(len(fearful), len(courageous), 3500)
-    sarcasmlen = min(len(sarcastic), len(sincere), 3500)
-    relaxedlen = min(len(relaxed), len(stressed), 3500)
-
     dataset_statistics(happy)
 
-    # # #
     print({'happy': len(happy), 'sad': len(sad), 'fearful': len(fearful), 'courageous': len(courageous),
-          'sarcastic': len(sarcastic), 'sincere': len(sincere), 'relaxed': len(relaxed), 'stressed': len(stressed)})
-    #
-    # results = []
-    # # print("HappySadNN")
-    # # results.append([testNN([w.text for w in happy[:happylen]], [w.text for w in sad[:happylen]], 1)])
-    # print("HappySadNB")
-    # results.append([test([w.text for w in happy[:happylen]], [w.text for w in sad[:happylen]], 1, trainNaiveBayes)])
-    # print("HappySadLR")
-    # results.append([test([w.text for w in happy[:happylen]], [w.text for w in sad[:happylen]], 1, trainLogisticRegression)])
-    #
-    # #
-    # # print("CourageNN")
-    # # results.append(testNN([w.text for w in courageous[:couragelen]], [w.text for w in fearful[:couragelen]], 1))
-    # # print("CourageNB")
-    # # results.append(test([w.text for w in courageous[:couragelen]], [w.text for w in fearful[:couragelen]], 1, trainNaiveBayes))
-    # # print("CourageLR")
-    # # results.append(test([w.text for w in courageous[:couragelen]], [w.text for w in fearful[:couragelen]], 1, trainLogisticRegression))
-    # #
-    # # print("SarcasmNN")
-    # # results.append(testNN([w.text for w in sarcastic[:sarcasmlen]], [w.text for w in sincere[:sarcasmlen]], 1))
-    # # print("SarcasmNB")
-    # # results.append(test([w.text for w in sarcastic[:sarcasmlen]], [w.text for w in sincere[:sarcasmlen]], 1, trainNaiveBayes))
-    # # print("SarcasmLR")
-    # # results.append(test([w.text for w in sarcastic[:sarcasmlen]], [w.text for w in sincere[:sarcasmlen]], 1, trainLogisticRegression))
-    #
-    #
-    # # print("StressNN")
-    # # results.append(testNN([w.text for w in stressed[:relaxedlen]], [w.text for w in relaxed[:relaxedlen]], 1))
-    # # print("StressNB")
-    # # results.append(test([w.text for w in stressed[:relaxedlen]], [w.text for w in relaxed[:relaxedlen]], 1, trainNaiveBayes))
-    # # print("StressLR")
-    # # results.append(test([w.text for w in stressed[:relaxedlen]], [w.text for w in relaxed[:relaxedlen]], 1, trainLogisticRegression))
-    #
-    # # # print(results)
-    #
-    # # results = []
-    # # predictorhappy = test([w.text for w in happy[:happylen]], [w.text for w in sad[:happylen]], 1)
-    # # results.append(predict(predictorhappy, ["Birthday"]))
-    # # predictorconfidence = test([w.text for w in courageous[:couragelen]], [w.text for w in fearful[:couragelen]], 1)
-    # # results.append(predict(predictorconfidence, ["Birthday"]))
-    # # predictorsarcasm = test([w.text for w in sarcastic[:sarcasmlen]], [w.text for w in sincere[:sarcasmlen]], 1)
-    # # results.append(predict(predictorsarcasm, ["Birthday"]))
+           'sarcastic': len(sarcastic), 'sincere': len(sincere), 'relaxed': len(relaxed), 'stressed': len(stressed)})
 
-def dataset_statistics(dataset):
-
-    data = [w.text for w in dataset]
-    character_count = 0
-    for i in data:
-        character_count += len(i)
-    avg_length = character_count / len(data)
-    print("Average length of document is {} characters".format(avg_length))
-    tweet_counts = count_vect.fit_transform(data)
-    num_non_zero = tweet_counts.nnz
-
-    print('Dimensions of X_tweet_counts are',tweet_counts.shape)
-    print('Number of non-zero elements in x_tweet_counts:', num_non_zero)
+    test_category('HappySad', happy, sad, True)
+    test_category('Courage', courageous, fearful, True)
+    test_category('Sarcasm', sarcastic, sincere, True)
+    test_category('Stress', relaxed, stressed, True)
 
 
 if __name__ == '__main__':
     # tweet_puller()
     test_driver()
-
-    # # predictorrelaxed = test([w.text for w in stressed[:relaxedlen]], [w.text for w in relaxed[:relaxedlen]], 1)
-    # # results.append(predict(predictorrelaxed, ["Birthday"]))
-    # # print(results)
